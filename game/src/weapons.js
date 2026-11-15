@@ -8,39 +8,39 @@ import { PALETTE } from './palette.js';
 
 export const WEAPONS = {
   wren: {
-    name: 'P9 Wren', slot: 'sidearm', price: 0, damage: 34, headMult: 4, rpm: 380, auto: false,
+    name: 'P9 Wren', slot: 'sidearm', price: 0, blurb: 'Standard sidearm. Free, honest, outclassed.', damage: 34, headMult: 4, rpm: 380, auto: false,
     mag: 12, reserve: 96, reload: 1.5, spread: 0.35, spreadMove: 2.4, spreadAir: 5.5, bloom: 0.3,
     recoil: 0.5, range: 20, minFactor: 0.45, pellets: 1, speed: 5.0, zoom: 1,
   },
   boar: {
-    name: 'SG-8 Boar', slot: 'primary', price: 1100, damage: 11, headMult: 2.4, rpm: 68, auto: false,
+    name: 'SG-8 Boar', slot: 'primary', price: 1100, blurb: 'Pump shotgun. Eight pellets settle close arguments.', damage: 11, headMult: 2.4, rpm: 68, auto: false,
     mag: 6, reserve: 32, reload: 2.9, spread: 3.4, spreadMove: 1.2, spreadAir: 3, bloom: 0,
     recoil: 2.6, range: 9, minFactor: 0.2, pellets: 8, speed: 4.8, zoom: 1,
   },
   krait: {
-    name: 'Krait SMG', slot: 'primary', price: 1250, damage: 26, headMult: 4, rpm: 820, auto: true,
+    name: 'Krait SMG', slot: 'primary', price: 1250, blurb: 'Fast, light, forgiving on the move. Weak at range.', damage: 26, headMult: 4, rpm: 820, auto: true,
     mag: 32, reserve: 128, reload: 2.1, spread: 0.85, spreadMove: 1.1, spreadAir: 4, bloom: 0.16,
     recoil: 0.34, range: 16, minFactor: 0.5, pellets: 1, speed: 5.1, zoom: 1,
   },
   harrier: {
-    name: 'Harrier AR', slot: 'primary', price: 2700, damage: 36, headMult: 4, rpm: 660, auto: true,
+    name: 'Harrier AR', slot: 'primary', price: 2700, blurb: 'The rifle. Accurate, lethal to the head, the default buy.', damage: 36, headMult: 4, rpm: 660, auto: true,
     mag: 30, reserve: 120, reload: 2.4, spread: 0.42, spreadMove: 2.6, spreadAir: 6, bloom: 0.22,
     recoil: 0.46, range: 26, minFactor: 0.55, pellets: 1, speed: 4.9, zoom: 1,
   },
   lance: {
-    name: 'Lance SR', slot: 'primary', price: 3500, damage: 108, headMult: 2, rpm: 42, auto: false,
+    name: 'Lance SR', slot: 'primary', price: 3500, blurb: 'Bolt-action. One body shot kills; the scope rewards stillness.', damage: 108, headMult: 2, rpm: 42, auto: false,
     mag: 5, reserve: 30, reload: 3.1, spread: 0.06, spreadMove: 4.5, spreadAir: 8, bloom: 0,
     recoil: 3.2, range: 60, minFactor: 0.85, pellets: 1, speed: 4.6, zoom: 2.6,
   },
 };
 export const GRENADES = {
-  he: { name: 'Frag Charge', price: 300, key: 'he' },
-  flash: { name: 'Blind Charge', price: 200, key: 'flash' },
+  he: { name: 'Frag Charge', price: 300, key: 'he', blurb: 'High explosive. Clears corners and site plants. Throw with G.' },
+  flash: { name: 'Blind Charge', price: 200, key: 'flash', blurb: 'Blinds anyone looking at it. Throw with F.' },
 };
 export const ARMOR = [
-  { name: 'No armour', price: 0, factor: 1, headMultCap: 4 },
-  { name: 'Kevlar Vest', price: 650, factor: 0.55, headMultCap: 4 },
-  { name: 'Vest + Helmet', price: 1000, factor: 0.55, headMultCap: 2.2 },
+  { name: 'No armour', price: 0, factor: 1, headMultCap: 4, blurb: '' },
+  { name: 'Kevlar Vest', price: 650, factor: 0.55, headMultCap: 4, blurb: 'Body armour. Cuts all damage taken by 45%.' },
+  { name: 'Vest + Helmet', price: 1000, factor: 0.55, headMultCap: 2.2, blurb: 'Vest plus helmet. Headshots lose most of their multiplier.' },
 ];
 
 // A fresh inventory: everyone starts every half with the Wren and nothing else.

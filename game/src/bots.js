@@ -1,7 +1,5 @@
-// Bot brains. A brain writes intent onto its actor — move, aim, fire, crouch,
-// channel — and main.js actuates it, as the player's controller does from input.
-// In staggered ticks brains perceive (vision cones, line of sight, hearing), then
-// act: advance the waypoint graph, hold, engage, plant/defuse, rotate.
+// Bot brains. A brain writes intent onto its actor; main.js actuates it. In staggered
+// ticks brains perceive (vision, line of sight, hearing), then act on the graph.
 import { lineOfSight } from './physics.js';
 import { eyeHeight } from './actors.js';
 import { WEAPONS } from './weapons.js';
@@ -68,7 +66,6 @@ function perceive(brain, world, now) {
     brain.lastSeen.z = e.pos.z;
     brain.lastSeenT = now;
   }
-  // Hearing: a recent shot nearby pulls a holding or advancing bot to look.
   if (!brain.seen) {
     for (let i = world.noise.length - 1; i >= 0; i--) {
       const n = world.noise[i];
@@ -85,7 +82,6 @@ function perceive(brain, world, now) {
   }
 }
 
-// Steer toward a world point; returns true on arrival.
 function steer(brain, world, tx, tz, dt, arriveR = 0.8) {
   const a = brain.actor;
   const dx = tx - a.pos.x;
@@ -98,7 +94,6 @@ function steer(brain, world, tx, tz, dt, arriveR = 0.8) {
   }
   let mx = dx / dist;
   let mz = dz / dist;
-  // Separation: do not stack on a teammate.
   for (const o of world.actors) {
     if (o === a || !o.alive) continue;
     const ox = a.pos.x - o.pos.x;
@@ -126,7 +121,6 @@ function followPath(brain, world, dt) {
   return false;
 }
 
-// Aim with human error: the cone widens with range and target speed.
 function aimError(brain, target, dist) {
   const base = 1.5 + dist * 0.028 + Math.min(1.2, target.speed2d * 0.22);
   return ((base / brain.skill) * Math.PI) / 180;
@@ -154,9 +148,7 @@ export function stepBot(brain, world, now, dt) {
   const enemy = brain.seen;
   const fresh = enemy && now - brain.lastSeenT < 0.4;
 
-  // --- Bomb-driven overrides -------------------------------------------------
   if (round.bombPlanted && a.team === 1) {
-    // Wardens converge; the designated defuser channels, the rest cover the site.
     brain.goalNode = world.siteNodeOf(round.bombSite);
     if (round.defuser === a) {
       const bp = round.bombPos;
@@ -173,14 +165,12 @@ export function stepBot(brain, world, now, dt) {
     return;
   }
   if (round.bombPlanted && a.team === 0) {
-    // Jackals post-plant: hold near the site and guard the charge.
     brain.goalNode = world.siteNodeOf(round.bombSite);
     if (followPath(brain, world, dt)) holdStance(brain, world, now);
     if (fresh) engage(brain, world, now, dt);
     return;
   }
 
-  // --- Planter ---
   if (brain.plan && brain.plan.planter && a.team === 0 && round.phase === 'live') {
     brain.goalNode = world.siteNodeOf(brain.plan.site);
     const site = world.siteOf(brain.plan.site);
@@ -197,23 +187,18 @@ export function stepBot(brain, world, now, dt) {
     return;
   }
 
-  // --- Engage ---
   if (fresh) { engage(brain, world, now, dt); return; }
   if (brain.seen === null && now - brain.lastSeenT < 1.4 && brain.lastSeenT > 0) {
-    // Lost them a moment ago: push the last known position.
     if (steer(brain, world, brain.lastSeen.x, brain.lastSeen.z, dt, 1.2)) holdStance(brain, world, now);
     return;
   }
 
-  // --- Deathmatch hunt ---
-  // No bomb, no plan: walk the graph from node to node until somebody shows up.
   if (brain.plan && brain.plan.type === 'hunt') {
     brain.goalNode = brain.plan.node;
     if (followPath(brain, world, dt)) brain.plan.node = Math.floor(brain.random() * world.map.nodes.length);
     return;
   }
 
-  // --- Plan movement ---
   if (brain.plan && brain.plan.type === 'defend') {
     brain.goalNode = brain.plan.holdNode;
     if (followPath(brain, world, dt)) {
@@ -224,7 +209,6 @@ export function stepBot(brain, world, now, dt) {
     }
     return;
   }
-  // Attackers without the bomb: move on the site, then hold its edge.
   if (brain.plan) {
     brain.goalNode = world.siteNodeOf(brain.plan.site);
     if (followPath(brain, world, dt)) holdStance(brain, world, now);
@@ -234,7 +218,6 @@ export function stepBot(brain, world, now, dt) {
   intent.moveZ = 0;
 }
 
-// Stand at a node and watch its lane; face snaps to a heard threat.
 function holdStance(brain, world, now) {
   const a = brain.actor;
   a.intent.moveX = 0;
@@ -251,7 +234,6 @@ function holdStance(brain, world, now) {
   a.intent.crouch = brain.actor.team === 1 && brain.scanPhase % 3 < 1.6;
 }
 
-// Fight the perceived enemy: keep range discipline, burst, pause, strafe, re-aim.
 function engage(brain, world, now, dt) {
   const a = brain.actor;
   const intent = a.intent;
@@ -278,7 +260,6 @@ function engage(brain, world, now, dt) {
       brain.burstPauseT = 0.22 + brain.random() * 0.3;
     }
   }
-  // Movement in a fight: hold range, strafe in bursts, sometimes drop to a crouch.
   brain.strafeT -= dt;
   if (brain.strafeT <= 0) { brain.strafeT = 0.7 + brain.random() * 0.8; brain.strafeDir = brain.random() < 0.5 ? -1 : 1; }
   const fx = -Math.sin(a.yaw);
@@ -289,8 +270,6 @@ function engage(brain, world, now, dt) {
   intent.crouch = brain.strafeT < 0.25 && dist < 20;
 }
 
-// What a bot buys at the freeze, by its purse: the priciest primary it can afford (with
-// a lean to the runner-up, so the field varies), then armour, then grenades.
 export function botBuy(actor, random) {
   const lo = actor.loadout;
   if (!lo.primary) {
@@ -322,8 +301,6 @@ function freshGun(id) {
   return { id, mag: WEAPONS[id].mag, reserve: WEAPONS[id].reserve };
 }
 
-// Deathmatch kit: no purse, just a pick. The ladder leans to the middle — rifles and
-// SMGs with the odd cannon — plus a coin-flip on armour and grenades.
 export function freePick(actor, random) {
   const lo = actor.loadout;
   const ladder = ['boar', 'krait', 'krait', 'jackdaw', 'jackdaw', 'harrier', 'harrier', 'harrier', 'heron', 'oxen', 'lance'];

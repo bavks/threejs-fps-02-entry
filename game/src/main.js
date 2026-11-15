@@ -1,13 +1,10 @@
-// IRONFALL — boot and the one loop. A fixed 60 Hz simulation (movement, bot brains,
-// combat, grenades, the mode machines) feeds a render at the display's rate. Combat is
-// resolved here and shared: the player and every bot fire through tryFire, take damage
-// through applyDamage and die through killActor, so one set of rules — spread, falloff,
-// headshots, armour — governs everyone, in every mode. ?shot=1..4 with &seed=N stages a
-// deterministic scene for a screenshot instead of starting the menu.
+// IRONFALL — boot and the one loop. A fixed 60 Hz simulation feeds a render at the
+// display's rate; player and bots share one combat path. ?shot=1..4 stages a screenshot.
 import * as THREE from 'three';
 import { PALETTE, TEAM_NAMES } from './palette.js';
 import { mulberry32 } from './rng.js';
 import { createMap } from './map.js';
+import { createSky } from './sky.js';
 import { rayWorld, rayBox } from './physics.js';
 import { createActor, buildActorModel, setModelGun, poseActorModel, stepLocomotion, eyeHeight, rayActor } from './actors.js';
 import { createBotAI, stepBot, botBuy, freePick } from './bots.js';
@@ -42,6 +39,7 @@ const camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerH
 scene.add(camera);
 
 const map = createMap(scene, random);
+const sky = createSky(scene, map.sky, renderer);
 const hud = createHud();
 const audio = createAudio();
 const effects = createEffects(scene, glowTexture());
@@ -68,8 +66,6 @@ for (const a of actors) {
 }
 const squads = [[player, actors[1], actors[2], actors[3], actors[4]], [actors[5], actors[6], actors[7], actors[8], actors[9]]];
 const match = createMatch(actors, squads, map, random);
-// Hostility is the mode's, not the shirt's: teammates in the team modes, everyone in
-// the free-for-all. Fire, perception and hearing all read it from here.
 const world = {
   actors, colliders: map.colliders, map, noise: [], round: match, siteOf: match.siteOf, siteNodeOf: match.siteNodeOf,
   hostile: (a, b) => (match.mode === 'ffa' ? a !== b : a.team !== b.team),
@@ -78,12 +74,16 @@ const world = {
 const controller = createPlayerController(player);
 const input = createInput(renderer.domElement, onLockChange);
 
-// First-person viewmodel: one cached model per gun, swapped on the camera.
 const viewmodel = new THREE.Group();
 viewmodel.position.set(0.235, -0.225, -0.48);
 camera.add(viewmodel);
 const vmGuns = {};
 let vmKick = 0;
+let vmKickZ = 0;
+let vmLagYaw = 0;
+let vmLagPitch = 0;
+let lastViewYaw = 0;
+let lastViewPitch = 0;
 let vmReloadDip = 0;
 function showViewmodel(id) {
   for (const key of Object.keys(vmGuns)) vmGuns[key].visible = false;
@@ -97,10 +97,6 @@ function showViewmodel(id) {
 showViewmodel('wren');
 
 // --- Practice range ---
-// Four dummies in a row down the north lane from a firing line in the north-west
-// corner, at 10 / 25 / 50 / 65 metres — the longest clean straight the yard has.
-// Actor-shaped (same ray, hitboxes and rounded model) but outside the cast: hits are
-// tallied here, not through applyDamage, and a downed dummy stands back up in 3s.
 const LINE = { x: -33, z: -24.6, yaw: -Math.PI / 2 };
 const RANGE_SPOTS = [[-23, -24.6, 10], [-8, -24.6, 25], [17, -24.6, 50], [32, -24.6, 65]];
 const range = { built: false, targets: [], hits: 0, hs: 0, last: '' };
@@ -170,7 +166,6 @@ function stepRange(dt) {
   }
 }
 
-// Every gun on the rack, free: keys 1-9 set the held gun outright, full magazine.
 const RANGE_GUNS = ['wren', 'magpie', 'boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
 function grantRangeGun(id) {
   const lo = player.loadout;
@@ -239,7 +234,6 @@ function killActor(victim, attacker, headshot) {
   }
 }
 
-// One shot (or one pellet of several).
 function fireOne(actor, def, now) {
   const eyeY = actor.pos.y + eyeHeight(actor);
   const speedRatio = Math.min(1, actor.speed2d / def.speed);
@@ -296,7 +290,6 @@ function tryFire(actor, now) {
   }
   if (now < actor.nextShot) return;
   if (def.burst) {
-    // A burst gun fires its burst on one press, then latches.
     if (actor.burstLeft <= 0) {
       if (actor.semiLatch) return;
       actor.burstLeft = def.burst;
@@ -319,12 +312,18 @@ function tryFire(actor, now) {
   actor.bloom = Math.min(2.2, actor.bloom + def.bloom);
   for (let p = 0; p < def.pellets; p++) fireOne(actor, def, now);
   muzzlePos(actor, tmpOrigin);
-  effects.muzzle(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, def.pellets > 1 || def.damage > 60 || def.heavy);
+  const big = def.pellets > 1 || def.damage > 60 || def.heavy;
+  const fyaw = actor.isPlayer ? controller.viewYaw() : actor.yaw;
+  const fpitch = actor.isPlayer ? controller.viewPitch() : actor.pitch;
+  tmpDir.set(-Math.sin(fyaw) * Math.cos(fpitch), Math.sin(fpitch), -Math.cos(fyaw) * Math.cos(fpitch));
+  effects.muzzle(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, big, tmpDir.x, tmpDir.y, tmpDir.z);
+  effects.smoke(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, tmpDir.x, tmpDir.y, tmpDir.z, big);
   audio.shot(held.id, actor.isPlayer ? undefined : actor.pos.x, actor.isPlayer ? undefined : actor.pos.z);
   world.noise.push({ x: actor.pos.x, z: actor.pos.z, t: now, team: actor.team });
   if (actor.isPlayer) {
     controller.kick(def.recoil * 0.55, (random() * 2 - 1) * def.recoil * 0.22);
-    vmKick = Math.min(0.09, vmKick + 0.03 + def.recoil * 0.008);
+    vmKick = Math.min(0.16, vmKick + 0.035 + def.recoil * 0.016);
+    vmKickZ = (random() * 2 - 1) * 0.03;
   } else {
     actor.muzzleT = 0.05;
   }
@@ -382,7 +381,6 @@ function onGrenade(g) {
       const d = Math.hypot(a.pos.x - x, a.pos.y + 0.9 - gy, a.pos.z - z);
       if (d > 5.4) continue;
       let dmg = 94 * (1 - (d / 5.4) * 0.78);
-      // Walls take the edge off.
       const blocked = rayWorld(x, gy, z, (a.pos.x - x) / (d || 1), 0.2, (a.pos.z - z) / (d || 1), map.colliders) < d - 0.4;
       if (blocked) dmg *= 0.25;
       applyDamage(a, dmg, g.owner === a ? null : g.owner, 'body');
@@ -424,6 +422,7 @@ function onGrenade(g) {
 
 // --- Actuation ---
 let simNow = 0;
+let skyClock = 0; // seconds since the last automatic sky change (continuous modes)
 let playing = false;
 let buyOpen = false;
 let specActor = null;
@@ -432,7 +431,6 @@ let pendingPrimary = 'harrier'; // the deathmatch spawn pick, applied on respawn
 function actuateBot(actor, dt) {
   const brain = actor.brain;
   const intent = actor.intent;
-  // Turn toward the brain's facing at a human rate.
   const rate = brain.seen ? 13 : 8;
   let dy = intent.faceYaw - actor.yaw;
   while (dy > Math.PI) dy -= Math.PI * 2;
@@ -448,10 +446,8 @@ function actuateBot(actor, dt) {
   stepLocomotion(actor, intent.moveX, intent.moveZ, speed, false, dt, map.colliders);
   if (intent.fire) tryFire(actor, simNow);
   if (!intent.fire) actor.semiLatch = false;
-  // Bots reload when the magazine runs dry or a lull lets them.
   const { held } = currentGun(actor.loadout);
   if (held.mag === 0 || (held.mag < def.mag * 0.3 && !brain.seen)) startReload(actor, simNow);
-  // A bot with a frag and a fresh sighting sometimes leads with it.
   if (actor.loadout.he > 0 && brain.seen && simNow - brain.lastSeenT < 0.3) {
     const d = Math.hypot(brain.seen.pos.x - actor.pos.x, brain.seen.pos.z - actor.pos.z);
     if (d > 9 && d < 23 && random() < 0.006) throwGrenade(actor, 'he', brain.seen.pos);
@@ -479,6 +475,11 @@ function step(dt) {
   if (match.mode === 'range') stepRange(dt);
   effects.update(dt, map.colliders, onGrenade);
   match.step(dt);
+  // The sky turns over every two minutes here; defusal turns it per round instead.
+  if (match.mode !== 'defusal') {
+    skyClock += dt;
+    if (skyClock > 120) { skyClock = 0; sky.cycle(); }
+  }
   drainEvents();
   while (world.noise.length && simNow - world.noise[0].t > 2.5) world.noise.shift();
   if (match.bombPlanted) {
@@ -501,6 +502,7 @@ function bannerForRound() {
 function drainEvents() {
   for (const ev of match.events.splice(0)) {
     if (ev.type === 'modeStart') {
+      skyClock = 0;
       hud.clearKillfeed();
       hud.setBomb(null);
       hud.setSpectate(null);
@@ -553,6 +555,7 @@ function drainEvents() {
         3400,
       );
     } else if (ev.type === 'roundStart') {
+      sky.cycle(); // a new round, a new sky
       hud.clearKillfeed();
       hud.setBomb(null);
       hud.setSpectate(null);
@@ -691,21 +694,19 @@ function handleKeys() {
     if (input.wasPressed('Escape')) toggleBuy(false);
     return;
   }
+  if (input.wasPressed('KeyK')) { sky.cycle(); skyClock = 0; }
   if (!playing) return;
   if (match.mode === 'range') {
-    // Keys 1-9 are the rack: each press hands over that gun, loaded.
     for (let i = 0; i < RANGE_GUNS.length; i++) {
       if (input.wasPressed(`Digit${i + 1}`)) grantRangeGun(RANGE_GUNS[i]);
     }
   } else if (!player.alive && match.mode !== 'defusal') {
-    // Down in a deathmatch: keys 1-7 choose the primary you respawn with.
     const picks = ['boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
     for (let i = 0; i < picks.length; i++) {
       if (input.wasPressed(`Digit${i + 1}`)) pendingPrimary = picks[i];
     }
   }
   if (input.wasPressed('KeyR')) startReload(player, simNow);
-  // Zoom toggle: X any time the held gun carries two levels, the wheel while aiming.
   const heldDef = currentGun(player.loadout).def;
   if (heldDef.zooms && heldDef.zooms.length > 1 &&
       (input.wasPressed('KeyX') || (input.state.wheel !== 0 && player.scoped))) {
@@ -736,7 +737,6 @@ function handleKeys() {
   }
   if (input.wasPressed('KeyG')) throwGrenade(player, 'he', null);
   if (input.wasPressed('KeyF')) throwGrenade(player, 'flash', null);
-  // Tab shows the scoreboard while held.
   if (input.state.keys.has('Tab')) { hud.renderBoard(actors, player); hud.showBoard(); }
   else hud.hideBoard();
 }
@@ -784,7 +784,6 @@ function syncHud() {
   const spread = spreadRadians(def, Math.min(1, player.speed2d / def.speed), !player.onGround, player.crouch, player.scoped, player.bloom);
   const px = (Math.tan(spread) / Math.tan((camera.fov * Math.PI) / 360)) * (window.innerHeight / 2);
   hud.setSpread(Math.max(3, Math.min(46, px * 0.55)));
-  // Prompts (defusal only — the other modes explain themselves on the score bar).
   let prompt = null;
   if (mode !== 'defusal') { /* no prompts */ }
   else if (player.alive && match.phase === 'freeze') prompt = 'Buy phase — press <kbd>B</kbd> to equip';
@@ -799,7 +798,6 @@ function syncHud() {
     const label = match.channel.kind === 'plant' ? `PLANTING — ${match.channel.actor.name}` : `DEFUSING — ${match.channel.actor.name}`;
     hud.channel(match.channel.progress / match.channel.need, label);
   } else hud.channel(null);
-  // Blindness: white-out that fades over the last stretch.
   if (player.flashBlindUntil > simNow) {
     const remain = player.flashBlindUntil - simNow;
     hud.setBlind(Math.min(1, remain / Math.max(0.4, (player.blindTotal || remain) * 0.55)));
@@ -815,7 +813,6 @@ function syncCamera(dt) {
     camera.rotation.set(controller.viewPitch(), controller.viewYaw(), 0, 'YXZ');
     specActor = null;
   } else {
-    // Spectate the first living teammate from their eyes (in the free-for-all, anyone).
     if (!specActor || !specActor.alive) {
       specActor = actors.find((a) => a !== player && a.alive && (a.team === player.team || match.mode === 'ffa')) || null;
     }
@@ -824,6 +821,7 @@ function syncCamera(dt) {
       camera.rotation.set(specActor.pitch, specActor.yaw, 0, 'YXZ');
     }
   }
+  if (player.alive) camera.rotation.z += controller.lean; // strafe roll
   if (shake > 0.002) {
     camera.rotation.x += (random() * 2 - 1) * shake * 0.05;
     camera.rotation.z += (random() * 2 - 1) * shake * 0.04;
@@ -835,13 +833,31 @@ function syncCamera(dt) {
     camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 14);
     camera.updateProjectionMatrix();
   }
-  // Viewmodel life: kick, reload dip, bob.
-  vmKick *= Math.max(0, 1 - dt * 11);
+  vmKick *= Math.max(0, 1 - dt * 9);
+  vmKickZ *= Math.max(0, 1 - dt * 9);
   vmReloadDip = Math.max(0, vmReloadDip - dt * 1.4);
-  const bobY = Math.sin(controller.bobPhase * 2) * 0.008 * controller.bobAmount;
-  viewmodel.position.set(0.235, -0.225 + bobY - vmReloadDip * 0.05, -0.48 + vmKick);
-  viewmodel.rotation.x = vmKick * 1.4 - vmReloadDip * 0.5;
-  // Through a closed scope the viewmodel hides; a reflex sight is shot both-eyes-open.
+  let dYaw = controller.viewYaw() - lastViewYaw;
+  if (dYaw > Math.PI) dYaw -= Math.PI * 2;
+  if (dYaw < -Math.PI) dYaw += Math.PI * 2;
+  const dPitch = controller.viewPitch() - lastViewPitch;
+  lastViewYaw = controller.viewYaw();
+  lastViewPitch = controller.viewPitch();
+  const lagK = Math.min(1, dt * 10);
+  vmLagYaw += (-dYaw * 1.6 - vmLagYaw) * lagK;
+  vmLagPitch += (-dPitch * 1.6 - vmLagPitch) * lagK;
+  const bobA = controller.bobAmount * (player.scoped ? 0.3 : 1);
+  const bobY = Math.sin(controller.bobPhase * 2) * 0.008 * bobA;
+  const bobX = Math.sin(controller.bobPhase) * 0.011 * bobA;
+  viewmodel.position.set(
+    0.235 + bobX + vmLagYaw * 0.35,
+    -0.225 + bobY - vmReloadDip * 0.05 - controller.landDip * 0.05,
+    -0.48 + vmKick,
+  );
+  viewmodel.rotation.set(
+    vmKick * 1.9 - vmReloadDip * 0.5 + vmLagPitch * 2.2,
+    vmLagYaw * 2.2,
+    Math.sin(controller.bobPhase) * 0.012 * bobA + vmKickZ,
+  );
   viewmodel.visible = player.alive && !(player.scoped && heldDef.optic === 'scope');
 }
 
@@ -855,7 +871,6 @@ function frame(nowMs) {
   if (playing) {
     const look = input.takeLook();
     if (input.state.locked && player.alive) {
-      // Aim sensitivity scales down with magnification, so a 5x scope is steerable.
       const scale = player.scoped ? 1 / currentZoom(player, currentGun(player.loadout).def) : 1;
       controller.look(look.x, look.y, scale);
     }
@@ -871,21 +886,19 @@ function frame(nowMs) {
   for (const a of actors) if (!a.isPlayer) poseActorModel(a, dt);
   for (const t of range.targets) {
     poseActorModel(t, dt);
-    // A hit rocks the dummy back on its stand; the pose resets rotation, so add after.
     if (t.rockT > 0) {
       t.rockT = Math.max(0, t.rockT - dt);
       t.model.rotation.x -= Math.sin((t.rockT / 0.3) * Math.PI) * 0.16;
     }
   }
   syncCamera(dt);
+  sky.update(dt);
   audio.setListener(player.pos.x, player.pos.z, controller.viewYaw());
   if (playing) syncHud();
   renderer.render(scene, camera);
 }
 
 // --- Staged screenshots ---
-// ?shot=1..4 freezes one deterministic frame: actors placed and posed by hand, live
-// effects fired once, painted twice before window.__shotReady is set.
 function faceToward(a, x, z) {
   a.yaw = Math.atan2(-(x - a.pos.x), -(z - a.pos.z));
   a.intent.faceYaw = a.yaw;
@@ -904,7 +917,6 @@ function stageShot(n) {
   const ally = actors[1];
 
   if (n === 1) {
-    // Through the Lance at 5x, down A-long: a Warden in the reticle, the world black.
     place(player, -27.5, 1.5, -18.6, -4.9);
     player.pitch = -0.02;
     player.loadout.primary = { id: 'lance', mag: 4, reserve: 25 };
@@ -919,11 +931,9 @@ function stageShot(n) {
     match.round = 4;
     match.roundTime = 72;
   } else if (n === 2) {
-    // A team deathmatch firefight in the rail yard, shot from the south-east corner:
-    // one Warden down on the site ring, one returning fire across the site, an ally
-    // beside the player shooting the same line, the kill race on the score bar.
     match.mode = 'tdm';
     match.matchTime = 203;
+    sky.set(2, true); // sunset
     place(player, 27.5, 8.5, 19, 17);
     player.pitch = -0.03;
     player.loadout.primary = { id: 'oxen', mag: 84, reserve: 200 };
@@ -944,22 +954,21 @@ function stageShot(n) {
     hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> ▸ <span class="k1">Koda</span>');
     hud.addKill('<span class="k0">Vex</span> ▸ BR-3 Jackdaw ▸ <span class="k1">Talon</span>');
     hud.hitmarker(false);
-    // Live fire, frozen at the flash: the player finishes Vex, Onyx answers across the
-    // site, the ally fires on the same line.
     const m1 = muzzlePos(player, new THREE.Vector3());
     effects.tracer(m1.x, m1.y, m1.z, 21.8, 1.1, 16.1);
-    effects.muzzle(m1.x, m1.y, m1.z, false);
+    effects.muzzle(m1.x, m1.y, m1.z, true, (21.8 - m1.x) / 9, (1.1 - m1.y) / 9, (16.1 - m1.z) / 9);
     effects.impact(21.8, 1.1, 16.1, 'spark');
     const m2 = muzzlePos(onyx, new THREE.Vector3());
     effects.tracer(m2.x, m2.y, m2.z, 26.2, 1.3, 9.3);
-    effects.muzzle(m2.x, m2.y, m2.z, false);
+    effects.muzzle(m2.x, m2.y, m2.z, false, (26.2 - m2.x) / 13, (1.3 - m2.y) / 13, (9.3 - m2.z) / 13);
     const m3 = muzzlePos(ally, new THREE.Vector3());
     effects.tracer(m3.x, m3.y, m3.z, 17.2, 1.2, 19.0);
+    effects.muzzle(m3.x, m3.y, m3.z, false, (17.2 - m3.x) / 10, (1.2 - m3.y) / 10, (19.0 - m3.z) / 10);
     effects.impact(17.2, 1.2, 19.0, 'dust');
   } else if (n === 3) {
-    // The buy menu over spawn, freeze time: a rifle and a vest already owned.
     match.phase = 'freeze';
     match.phaseT = 5;
+    sky.set(3, true); // night — the lamps carry the yard
     place(player, -26, 20, -6, 0);
     player.loadout.primary = { id: 'harrier', mag: 30, reserve: 120 };
     player.loadout.current = 'primary';
@@ -971,9 +980,8 @@ function stageShot(n) {
     hud.showBuy();
     buyOpen = true;
   } else {
-    // The practice range from the firing line: dummies at 10, 25, 50 and 65 metres —
-    // the nearest flashing from a fresh hit, the 25 down, the tally on the HUD.
     match.mode = 'range';
+    sky.set(1, true); // cloudy
     resetRange();
     placePlayerAtLine();
     player.loadout.primary = { id: 'harrier', mag: 27, reserve: 9999 };

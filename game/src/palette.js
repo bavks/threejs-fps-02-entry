@@ -1,5 +1,4 @@
-// IRONFALL palette: one look for the whole game. Warm rust against slate teal, late-afternoon
-// sun over a smelter yard. Teams read by colour alone: Jackals rust, Wardens teal.
+// IRONFALL palette: warm rust against slate teal. Teams read by colour alone.
 export const PALETTE = {
   sky: 0x7f9db8,
   fog: 0x9db2c2,
@@ -24,6 +23,5 @@ export const PALETTE = {
   black: 0x14161a,
 };
 
-// Team indices used everywhere: 0 = Jackals (attack), 1 = Wardens (defend).
 export const TEAM_NAMES = ['Jackals', 'Wardens'];
 export const TEAM_COLORS = [PALETTE.jackal, PALETTE.teal];

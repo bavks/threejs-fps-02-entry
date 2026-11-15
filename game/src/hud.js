@@ -1,7 +1,5 @@
-// The HUD: every DOM element the game talks to. It renders state pushed in by main.js —
-// health, ammo, money, the clock, the score, the killfeed, banners, the channel bar, the
-// buy menu, the scoreboard and the menu/pause/match screens. It owns no game state;
-// callbacks out (play, buy, resume, restart, pick, menu) are assigned by main.js.
+// The HUD: every DOM element the game talks to. It renders state pushed in by main.js
+// and owns no game state.
 import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -70,7 +68,6 @@ export function createHud() {
       els.score1.textContent = s1;
       els.roundLabel.textContent = roundText;
     },
-    // The score bar's two names follow the mode.
     setLabels(a, b) {
       if (els.label0.textContent !== a) els.label0.textContent = a;
       if (els.label1.textContent !== b) els.label1.textContent = b;
@@ -80,7 +77,6 @@ export function createHud() {
       if (text) { els.rangeInfo.textContent = text; els.rangeInfo.classList.add('show'); }
       else els.rangeInfo.classList.remove('show');
     },
-    // The deathmatch spawn bar: one button per primary, the pick lit. Built once.
     buildLoadout(items) {
       els.loadout.innerHTML = '';
       for (const { id, key } of items) {
@@ -148,7 +144,6 @@ export function createHud() {
       clearTimeout(hud._hdT);
       hud._hdT = setTimeout(() => els.hitdir.classList.remove('show'), 700);
     },
-    // ADS state: a closed scope draws its lens and reticle, a reflex sight its dot.
     setScope(on, optic, label) {
       els.scope.classList.toggle('show', !!on);
       els.scope.classList.toggle('dot', optic === 'dot');

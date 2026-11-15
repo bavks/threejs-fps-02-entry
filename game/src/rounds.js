@@ -1,7 +1,5 @@
-// Rounds: the matches. One state machine owns the phase, clocks, bomb, economies
-// and scores for every mode. It never touches the DOM or three.js: it pushes events
-// onto a queue main.js drains into the HUD, audio and effects, and reads the intent
-// the player controller and bot brains write onto each actor.
+// Rounds: the matches. One state machine owns phase, clocks, bomb, economies and
+// scores for every mode; it pushes events main.js drains into HUD and effects.
 import { WEAPONS, GRENADES, ARMOR, createLoadout } from './weapons.js';
 import { HOLD_NODES, SITE_NODES, SITES, SPAWNS } from './map.js';
 
@@ -14,7 +12,7 @@ export const DEFUSE_TIME = 5;
 const WIN_AWARD = 2700;
 const OBJECTIVE_AWARD = 2900;
 const LOSS_BASE = 1400;
-// The other modes: one long live phase each — respawns and win lines, or no fight.
+
 export const TDM_TARGET = 30;
 export const FFA_TARGET = 20;
 const FFA_SPAWNS = [...SPAWNS[0], ...SPAWNS[1], [SITES[0].x, SITES[0].z], [SITES[1].x, SITES[1].z], [0, 1.5]];
@@ -54,8 +52,6 @@ export function createMatch(actors, squads, map, random) {
       match.startRound();
     },
 
-    // Enter any mode from the menu. Defusal runs the round machine above; the other
-    // three share one long live phase, differing in spawns, hostility and scoring.
     startMode(mode) {
       match.mode = mode;
       match.winnerName = null;
@@ -75,7 +71,6 @@ export function createMatch(actors, squads, map, random) {
         a.loadout = createLoadout();
       }
       if (mode === 'range') {
-        // Nobody fights: the bots stay down and hidden, the player walks to the line.
         for (const a of actors) { a.alive = a.isPlayer; a.health = 100; }
       } else {
         for (const a of actors) spawnActor(a);
@@ -86,7 +81,6 @@ export function createMatch(actors, squads, map, random) {
     startRound() {
       match.round += 1;
       if (match.round === 9) {
-        // Half time: squads swap sides, purses and loadouts reset.
         setSides(1);
         for (const a of actors) { a.money = 800; a.loadout = createLoadout(); }
         match.events.push({ type: 'halftime' });
@@ -99,7 +93,6 @@ export function createMatch(actors, squads, map, random) {
       match.bombTimer = 0;
       match.defuser = null;
       match.channel = null;
-      // Bodies back to spawn, whole and unhurt.
       for (const squad of squads) {
         squad.forEach((a, i) => {
           const sp = map.spawns[a.team][i % map.spawns[a.team].length];
@@ -123,14 +116,12 @@ export function createMatch(actors, squads, map, random) {
           a.intent.channel = false;
         });
       }
-      // The charge goes to a random Jackal — sometimes the player.
       const jackals = actors.filter((a) => a.team === 0);
       match.carrier = jackals[Math.floor(random() * jackals.length)];
       planRound();
       match.events.push({ type: 'roundStart', round: match.round });
     },
 
-    // Buy window: the freeze, or the first 15 seconds near your own spawn.
     canBuy(actor) {
       if (match.phase === 'freeze') return true;
       if (match.phase !== 'live' || match.bombPlanted) return false;
@@ -237,7 +228,6 @@ export function createMatch(actors, squads, map, random) {
           return;
         }
         if (match.aliveCount(1) === 0) { endRound(0, 'elimination'); return; }
-        // Attackers all dead with the charge down: Wardens must still defuse.
         return;
       }
 
@@ -249,13 +239,11 @@ export function createMatch(actors, squads, map, random) {
   };
 
   function setSides(half) {
-    // Squad 0 attacks in the first half, defends in the second.
     squads[0].forEach((a) => { a.team = half === 0 ? 0 : 1; });
     squads[1].forEach((a) => { a.team = half === 0 ? 1 : 0; });
     match.events.push({ type: 'sides', half });
   }
 
-  // Deathmatch spawn: on your feet at a spawn point, magazines refilled, facing centre.
   function spawnActor(a) {
     let sp;
     if (match.mode === 'ffa') sp = FFA_SPAWNS[Math.floor(random() * FFA_SPAWNS.length)];
@@ -321,7 +309,6 @@ export function createMatch(actors, squads, map, random) {
     match.defuser = best;
   }
 
-  // Plant and defuse are channels: hold the intent in place; moving or dying breaks them.
   function stepChannel(dt) {
     const ch = match.channel;
     if (ch) {
@@ -343,7 +330,6 @@ export function createMatch(actors, squads, map, random) {
         return;
       }
     }
-    // Start a plant: the carrier, standing in either site, asking to channel.
     const carrier = match.carrier;
     if (!match.bombPlanted && carrier && carrier.alive && carrier.intent.channel) {
       for (const s of SITES) {
@@ -355,7 +341,6 @@ export function createMatch(actors, squads, map, random) {
         }
       }
     }
-    // Start a defuse: a Warden at the charge, asking to channel.
     if (match.bombPlanted) {
       for (const a of actors) {
         if (a.alive && a.team === 1 && a.intent.channel && Math.hypot(a.pos.x - match.bombPos.x, a.pos.z - match.bombPos.z) < 1.6) {
@@ -392,7 +377,6 @@ export function createMatch(actors, squads, map, random) {
       a.money += a.team === winnerTeam ? winPay : lossPay;
     }
     match.events.push({ type: 'roundEnd', winner: winnerTeam, how, scores: [...match.scores] });
-    // Match point: first to 9, with round 17 as the decider if the halves split 8-8.
     if (match.scores[winnerTeam] >= 9 || match.round >= 17) {
       match.winner = match.scores[0] > match.scores[1] ? 0 : 1;
     }

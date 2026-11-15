@@ -1,5 +1,4 @@
-// A tiny seeded RNG (mulberry32). One instance drives every staged screenshot scene so a
-// capture is reproducible; live play seeds from the clock through the same interface.
+// A tiny seeded RNG (mulberry32): staged shots seed it fixed, live play by the clock.
 export function mulberry32(initial) {
   let a = initial | 0;
   return function random() {

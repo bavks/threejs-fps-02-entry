@@ -1,5 +1,5 @@
-// Keyboard and mouse, and the pointer lock that turns the mouse into look. Discrete
-// presses are queued separately from held keys, so the simulation consumes each once.
+// Keyboard and mouse, and the pointer lock that turns the mouse into look. Presses are
+// queued separately from held keys, so the sim consumes each once.
 export function createInput(canvas, onLockChange) {
   const keys = new Set();
   const pressed = new Set();

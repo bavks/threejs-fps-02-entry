@@ -1,6 +1,5 @@
-// The player's body: mouse look with a recoil punch that springs back, and wish-direction
-// movement from the camera yaw. All physics is the shared actor step — this module only
-// translates input into intent, so the player and the bots move by the same rules.
+// The player's body: mouse look with a recoil punch, wish-direction movement from the
+// camera yaw. Physics is the shared actor step — this only translates input to intent.
 import { stepLocomotion, eyeHeight } from './actors.js';
 import { currentGun, currentZoom } from './weapons.js';
 
@@ -16,6 +15,8 @@ export function createPlayerController(actor) {
     bobAmount: 0,
     swayT: 0, // scope breathing phase; swayAmp eases toward its scoped target
     swayAmp: 0,
+    landDip: 0, // landing spring: set by the fall that just ended, decays in step
+    lean: 0, // strafe roll, smoothed toward the lateral-speed target
 
     look(dx, dy, scale = 1) {
       actor.yaw -= dx * SENS * scale;
@@ -32,7 +33,6 @@ export function createPlayerController(actor) {
 
     step(dt, input, colliders, canMove) {
       const a = actor;
-      // Recoil recovery.
       const decay = Math.max(0, 1 - dt * 7);
       ctl.punch *= decay;
       ctl.punchYaw *= decay;
@@ -56,15 +56,20 @@ export function createPlayerController(actor) {
       let speed = def.speed;
       if (a.crouch) speed *= 0.36;
       if (a.scoped) speed *= 0.45;
+      const wasAir = !a.onGround;
+      const vy = a.vel.y;
       stepLocomotion(a, wishX, wishZ, speed, input.state.keys.has('Space'), dt, colliders);
-      // Scope sway: a breathing figure, larger at higher magnification and on the move,
-      // settling crouched and still. It feeds the view below, so reticle and shot agree.
+      // Landing dip and strafe lean: camera-only springs fed by the step just taken.
+      if (wasAir && a.onGround) ctl.landDip = Math.min(0.55, -vy * 0.045);
+      ctl.landDip = Math.max(0, ctl.landDip - dt * 2.4);
+      const lat = a.vel.x * cos - a.vel.z * sin; // speed along the camera's right
+      const leanT = a.onGround && a.alive ? Math.max(-0.04, Math.min(0.04, -lat * 0.007)) : 0;
+      ctl.lean += (leanT - ctl.lean) * Math.min(1, dt * 7);
       ctl.swayT += dt * 3.9;
       const swayTarget = a.scoped && a.alive
         ? 0.0011 * currentZoom(a, def) * (a.crouch ? 0.4 : 1) * (a.speed2d > 0.4 ? 1.7 : 1)
         : 0;
       ctl.swayAmp += (swayTarget - ctl.swayAmp) * Math.min(1, dt * 5);
-      // View bob: grows with ground speed, settles when still.
       const target = a.onGround && a.alive ? Math.min(1, a.speed2d / 5) : 0;
       ctl.bobAmount += (target - ctl.bobAmount) * Math.min(1, dt * 8);
       ctl.bobPhase += a.speed2d * dt * 1.6;
@@ -74,7 +79,7 @@ export function createPlayerController(actor) {
       const a = actor;
       out.set(
         a.pos.x,
-        a.pos.y + eyeHeight(a) + Math.sin(ctl.bobPhase * 2) * 0.018 * ctl.bobAmount,
+        a.pos.y + eyeHeight(a) + Math.sin(ctl.bobPhase * 2) * 0.018 * ctl.bobAmount - ctl.landDip * 0.13,
         a.pos.z,
       );
       return out;

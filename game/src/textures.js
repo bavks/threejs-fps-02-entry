@@ -1,6 +1,4 @@
-// Procedural canvas textures: the yard's surfaces are painted once at boot, so the game
-// ships no image files. The ground sheet carries the painted bomb-site rings, the rail
-// line and the grime of a working smelter.
+// Procedural canvas textures, painted once at boot — the game ships no image files.
 import * as THREE from 'three';
 
 function canvas(w, h) {
@@ -33,7 +31,6 @@ function noise(ctx, w, h, base, fleck, count, random) {
   ctx.globalAlpha = 1;
 }
 
-// The yard floor: 68 x 52 metres on one sheet.
 export function groundTexture(random) {
   const W = 2048;
   const H = 1564;
@@ -42,18 +39,15 @@ export function groundTexture(random) {
   const pz = (z) => ((z + 26) / 52) * H;
   const m = W / 68; // pixels per metre
   noise(ctx, W, H, '#55534e', ['#4a4844', '#605e57', '#6b675e', '#3f3e3a'], 5200, random);
-  // Concrete apron under the furnace hall and mid, asphalt elsewhere.
   ctx.fillStyle = '#615d54';
   ctx.globalAlpha = 0.55;
   ctx.fillRect(px(-34), pz(-26), 24 * m, 20 * m);
   ctx.fillRect(px(-8), pz(-8), 16 * m, 16 * m);
   ctx.globalAlpha = 1;
-  // Expansion joints.
   ctx.strokeStyle = 'rgba(20,20,20,0.35)';
   ctx.lineWidth = 2;
   for (let x = -32; x < 34; x += 4) { ctx.beginPath(); ctx.moveTo(px(x), 0); ctx.lineTo(px(x), H); ctx.stroke(); }
   for (let z = -24; z < 26; z += 4) { ctx.beginPath(); ctx.moveTo(0, pz(z)); ctx.lineTo(W, pz(z)); ctx.stroke(); }
-  // Oil stains.
   for (let i = 0; i < 26; i++) {
     const x = random() * W;
     const y = random() * H;
@@ -64,7 +58,6 @@ export function groundTexture(random) {
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
-  // Rail line through the rail yard: steel strips and sleepers.
   ctx.fillStyle = '#3a3a3c';
   ctx.fillRect(px(23.2), pz(6), 1.6 * m, 20 * m);
   ctx.fillStyle = '#2c2118';
@@ -72,7 +65,6 @@ export function groundTexture(random) {
   ctx.fillStyle = '#8f9296';
   ctx.fillRect(px(23.45), pz(6), 0.09 * m, 20 * m);
   ctx.fillRect(px(24.45), pz(6), 0.09 * m, 20 * m);
-  // Painted site rings and letters.
   const site = (x, z, colour, letter) => {
     ctx.strokeStyle = colour;
     ctx.lineWidth = 0.35 * m;
@@ -91,7 +83,6 @@ export function groundTexture(random) {
   };
   site(-19, -13.5, '#c65a2e', 'A');
   site(21, 16, '#2e7f86', 'B');
-  // Worn lane arrows at the two spawns.
   ctx.fillStyle = 'rgba(230,225,210,0.28)';
   const arrow = (x, z, rot) => {
     ctx.save();
@@ -155,7 +146,6 @@ export function containerTexture(random, base, dark) {
   return texture(c);
 }
 
-// A soft radial glow: muzzle flashes, the explosion core, sun glare.
 export function glowTexture() {
   const [c, ctx] = canvas(128, 128);
   const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 64);

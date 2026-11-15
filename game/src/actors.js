@@ -1,7 +1,4 @@
-// Actors: every combatant — the player and the nine bots — is one of these. An actor
-// owns its physics body, health, loadout, score line and (for bots) a humanoid model in
-// team colours with a separate head, so a headshot is a place, not a dice roll. The same
-// accelerate/friction/crouch/jump step drives the player and the bots alike.
+// Actors: every combatant is one of these — body, health, loadout, score, model.
 import * as THREE from 'three';
 import { PALETTE, TEAM_COLORS } from './palette.js';
 import { makeBox, moveBody, rayBox } from './physics.js';
@@ -20,11 +17,9 @@ export function createActor(team, name, isPlayer) {
     health: 100, alive: true,
     loadout: createLoadout(),
     money: 800, kills: 0, deaths: 0,
-    // combat state
     nextShot: 0, reloadUntil: 0, bloom: 0, scoped: false, triggerHeld: false,
     burstLeft: 0, zoomIdx: 0,
     semiLatch: false, lastShotAt: -9, flashBlindUntil: 0, suppressedUntil: 0,
-    // presentation
     model: null, walkPhase: 0, deathT: 0, flashT: 0, muzzleT: 0,
     speed2d: 0,
   };
@@ -34,7 +29,6 @@ export function eyeHeight(actor) {
   return actor.height - 0.16;
 }
 
-// The two hitboxes, rebuilt from the actor's current pose; crouching lowers both.
 export function actorHitboxes(actor, out) {
   const top = actor.pos.y + actor.height;
   const headBase = actor.pos.y + actor.height * 0.76;
@@ -43,7 +37,6 @@ export function actorHitboxes(actor, out) {
   return out;
 }
 
-// Ray vs one actor: returns { t, part } for the nearer of body/head, or null.
 const hitScratch = { body: null, head: null };
 export function rayActor(ox, oy, oz, dx, dy, dz, actor) {
   actorHitboxes(actor, hitScratch);
@@ -54,7 +47,6 @@ export function rayActor(ox, oy, oz, dx, dy, dz, actor) {
   return null;
 }
 
-// One fixed step of movement; speedMax already accounts for the held weapon and crouch.
 export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, colliders) {
   const targetH = actor.crouch ? CROUCH_H : STAND_H;
   actor.height += (targetH - actor.height) * Math.min(1, dt * 12);
@@ -75,7 +67,6 @@ export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, coll
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a186, roughness: 0.8 });
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7, metalness: 0.3 });
 
-// One rounded part: capsule limbs, sphere joints, squashed-sphere torso.
 function part(mat, geo, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
@@ -85,11 +76,6 @@ function part(mat, geo, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1) {
   return m;
 }
 
-// A soldier, rounded: capsule legs swinging from the hip, a capsule torso under a
-// rounded vest, sphere shoulders and kneepads, a sphere head with a visor band under a
-// dome helmet, gun carried in both hands at the aim pitch. Pose anchors and dimensions
-// match the hitboxes, which are computed from the actor, never from this model. The gun
-// mount sits at the arm's end, in the hands; shot rays still start at the eye.
 export function buildActorModel(actor) {
   const teamMat = new THREE.MeshStandardMaterial({ color: TEAM_COLORS[actor.team], roughness: 0.75 });
   const teamDark = new THREE.MeshStandardMaterial({ color: actor.team === 0 ? PALETTE.jackalDark : PALETTE.wardenDark, roughness: 0.8 });
@@ -137,7 +123,6 @@ export function setModelGun(actor, weaponId) {
   mount.add(gun);
 }
 
-// Pose the model from the actor's state. Render step only, never in the simulation.
 export function poseActorModel(actor, dt) {
   const g = actor.model;
   if (!g) return;

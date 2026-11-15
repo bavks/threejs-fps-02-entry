@@ -1,10 +1,5 @@
-// Weapons: nine guns with distinct jobs, plus two grenades and two armour tiers. The
-// numbers are the game: a headshot multiplies damage, damage falls off past a gun's range,
-// and spread grows with movement, air time and sustained fire — so stopping, crouching and
-// bursting are how you hit things. Firing is resolved by main.js; this module owns the
-// data, the maths and the gun models. Optics: a gun with `zooms` aims with RMB —
-// `optic: 'dot'` is an open reflex sight, `optic: 'scope'` a closed tube with mil-dots.
-// The Lance carries two zoom levels, toggled with X or the wheel while aiming.
+// Weapons: nine guns with distinct jobs, plus grenades and armour. The numbers are the
+// game — headshots, falloff, spread. This module owns the data, the maths, the models.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -65,7 +60,6 @@ export const ARMOR = [
   { name: 'Vest + Helmet', price: 1000, factor: 0.55, headMultCap: 2.2, blurb: 'Vest plus helmet. Headshots lose most of their multiplier.' },
 ];
 
-// A fresh inventory: everyone starts every half with the Wren and nothing else.
 export function createLoadout() {
   return {
     primary: null,
@@ -82,7 +76,6 @@ export function currentGun(loadout) {
   return { held, def: WEAPONS[held.id] };
 }
 
-// Damage after falloff, the head multiplier (helmet-capped) and armour.
 export function damageAt(def, dist, part, armorTier) {
   let dmg = def.damage;
   if (dist > def.range) {
@@ -93,13 +86,11 @@ export function damageAt(def, dist, part, armorTier) {
   return dmg * ARMOR[armorTier].factor;
 }
 
-// The magnification an actor is dialled to (1 for iron sights); zoomIdx resets on a swap.
 export function currentZoom(actor, def) {
   if (!def.zooms) return 1;
   return def.zooms[Math.min(actor.zoomIdx || 0, def.zooms.length - 1)];
 }
 
-// Total spread in radians for one shot.
 export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloomDeg) {
   let deg = def.spread + bloomDeg;
   if (def.zooms && def.zooms[def.zooms.length - 1] >= 2 && !scoped) deg = Math.max(deg, 2.4); // hip-firing a scoped gun is a guess
@@ -110,9 +101,6 @@ export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloom
 }
 
 // --- Gun models ---
-// Viewmodels and the guns bots carry are rounded builds on the same anchors as the boxy
-// originals: capsule receivers and stocks, tube barrels, ring optics. Every centre and
-// length matches, so muzzle points, mounts and the ADS picture stay put.
 const gunMats = {
   body: new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.45, metalness: 0.7 }),
   grip: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 }),
@@ -120,7 +108,6 @@ const gunMats = {
   barrel: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.35, metalness: 0.8 }),
 };
 
-// put(): one rounded part; sx/sy squash its cross-section to the old box's proportions.
 function put(g, geo, mat, x, y, z, rx = 0, sx = 1, sy = 1) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
@@ -130,10 +117,10 @@ function put(g, geo, mat, x, y, z, rx = 0, sx = 1, sy = 1) {
   return m;
 }
 const tube = (r, l) => new THREE.CylinderGeometry(r, r, l, 20).rotateX(Math.PI / 2); // barrel along z
-const rod = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16).rotateX(Math.PI / 2); // capsule along z, total length l
-const drop = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16); // capsule along y, total height l
+const rod = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16).rotateX(Math.PI / 2); // along z
+const drop = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16); // along y
 const pin = (r, l) => new THREE.CylinderGeometry(r, r, l, 12); // short post along y
-const ring = (r, t) => new THREE.TorusGeometry(r, t, 10, 28); // optic rim, facing the shooter
+const ring = (r, t) => new THREE.TorusGeometry(r, t, 10, 28); // optic rim
 const ball = (r) => new THREE.SphereGeometry(r, 16, 12);
 
 export function buildGunModel(id) {
@@ -148,13 +135,13 @@ export function buildGunModel(id) {
     put(g, rod(0.03, 0.3), B, 0, 0.01, -0.02, 0, 0.83); // frame and top strap
     put(g, tube(0.016, 0.16), K, 0, 0.02, -0.24); // heavy barrel
     put(g, tube(0.011, 0.14), K, 0, -0.004, -0.235); // underlug
-    put(g, tube(0.0295, 0.075), B, 0, -0.03, 0); // the drum, round at last
+    put(g, tube(0.0295, 0.075), B, 0, -0.03, 0); // drum
     put(g, drop(0.026, 0.105), W, 0, -0.085, 0.06, 0.3, 0.8); // grip
     put(g, ball(0.009), A, 0, 0.048, -0.13); // front blade
   } else if (id === 'boar') {
     put(g, rod(0.04, 0.4), B, 0, 0, -0.05, 0, 0.75); // receiver
     put(g, tube(0.0175, 0.34), K, 0, 0.015, -0.38); // barrel
-    put(g, tube(0.013, 0.3), K, 0, -0.024, -0.36); // magazine tube under it
+    put(g, tube(0.013, 0.3), K, 0, -0.024, -0.36); // mag tube
     put(g, tube(0.027, 0.14), W, 0, 0.012, -0.22); // pump sleeve
     put(g, rod(0.045, 0.18), W, 0, -0.02, 0.24, 0, 0.61); // stock
   } else if (id === 'krait') {
@@ -166,7 +153,7 @@ export function buildGunModel(id) {
     put(g, rod(0.0125, 0.1), A, 0, 0.058, -0.1, 0, 0.8); // top rail stripe
   } else if (id === 'jackdaw') {
     put(g, rod(0.0425, 0.44), B, 0, 0, -0.03, 0, 0.66); // receiver
-    put(g, tube(0.03, 0.2), W, 0, 0.005, -0.3); // round handguard
+    put(g, tube(0.03, 0.2), W, 0, 0.005, -0.3); // handguard
     put(g, tube(0.013, 0.1), K, 0, 0.012, -0.42); // barrel
     put(g, rod(0.014, 0.3), B, 0, 0.068, -0.02); // carry handle
     put(g, drop(0.027, 0.13), B, 0, -0.095, -0.01, 0, 0.67); // straight mag
@@ -187,7 +174,7 @@ export function buildGunModel(id) {
     put(g, rod(0.05, 0.46), B, 0, 0, -0.04, 0, 0.75); // fat receiver
     put(g, tube(0.017, 0.32), K, 0, 0.015, -0.42); // barrel
     put(g, tube(0.027, 0.18), K, 0, 0.015, -0.36); // perforated shroud
-    put(g, rod(0.055, 0.16), B, 0, -0.115, -0.05, 0, 0.82); // belt box, rounded
+    put(g, rod(0.055, 0.16), B, 0, -0.115, -0.05, 0, 0.82); // belt box
     put(g, rod(0.015, 0.3), B, 0, 0.075, -0.02); // carry handle
     put(g, drop(0.025, 0.095), W, 0, -0.07, 0.13, 0.25, 0.84); // grip
     put(g, rod(0.0375, 0.15), B, 0, -0.01, 0.27, 0, 0.75); // stock
@@ -204,7 +191,6 @@ export function buildGunModel(id) {
     put(g, rod(0.04, 0.22), W, 0, -0.02, 0.3, 0, 0.69); // stock
     put(g, drop(0.025, 0.1), B, 0, -0.08, -0.05, 0, 0.7); // mag
   } else {
-    // harrier, wearing its red-dot sight
     put(g, rod(0.0425, 0.42), B, 0, 0, -0.03, 0, 0.65); // receiver
     put(g, tube(0.027, 0.15), W, 0, 0.008, -0.27); // round handguard
     put(g, tube(0.014, 0.2), K, 0, 0.012, -0.33); // barrel

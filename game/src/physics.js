@@ -1,7 +1,4 @@
-// Axis-aligned box physics. The whole world is boxes: a collider is
-// { minX, maxX, minY, maxY, minZ, maxZ }. Bodies move one axis at a time and are pushed
-// out of any box they overlap, so nothing tunnels or sticks. Bullets and sight lines use
-// the slab ray test against the same boxes.
+// Axis-aligned box physics. A collider is { minX, maxX, minY, maxY, minZ, maxZ }.
 
 export function makeBox(cx, cy, cz, w, h, d) {
   return {
@@ -11,7 +8,6 @@ export function makeBox(cx, cy, cz, w, h, d) {
   };
 }
 
-// Move a body by vel*dt, resolving collisions axis by axis.
 export function moveBody(body, colliders, dt) {
   const p = body.pos;
   const v = body.vel;
@@ -56,7 +52,6 @@ export function moveBody(body, colliders, dt) {
   }
 }
 
-// Slab test: distance along the ray to the box, or Infinity.
 export function rayBox(ox, oy, oz, dx, dy, dz, c) {
   let tmin = 0;
   let tmax = Infinity;
@@ -93,7 +88,6 @@ export function rayBox(ox, oy, oz, dx, dy, dz, c) {
   return tmin;
 }
 
-// Nearest wall hit along a ray, in metres.
 export function rayWorld(ox, oy, oz, dx, dy, dz, colliders) {
   let best = Infinity;
   for (let i = 0; i < colliders.length; i++) {
@@ -103,7 +97,6 @@ export function rayWorld(ox, oy, oz, dx, dy, dz, colliders) {
   return best;
 }
 
-// True when nothing blocks the line between two points (bot vision, flash checks).
 export function lineOfSight(ax, ay, az, bx, by, bz, colliders) {
   const dx = bx - ax;
   const dy = by - ay;

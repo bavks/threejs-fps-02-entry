@@ -1,6 +1,5 @@
-// The Foundry: one original map. Smelter yard split by a furnace hall (site A,
-// north-west) and a rail yard (site B, south-east), joined by a mid core and a
-// roofed tunnel run. Every solid is an AABB collider; bots path on the graph.
+// The Foundry: one original map — furnace hall (site A), rail yard (site B), mid core.
+// Every solid is an AABB collider; bots path on the graph.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 import { makeBox } from './physics.js';
@@ -16,7 +15,6 @@ export const SPAWNS = [
   [[28, -21], [24, -21], [26, -18.5], [29, -18], [23, -18.5]], // Wardens
 ];
 
-// Waypoints [x, z]; edges mutual; BFS builds the next-hop table.
 const NODES = [
   [-26, 20], [-27, 8], [-27, -4], [-18.8, -6], [-19, -13.5], [-10.5, -13.8], [-16, -20],
   [-9.5, -11], [0, -16], [0, -8], [-8, 0], [0, 1.5], [8, 0], [0, 9], [12, 7], [16, 11],
@@ -30,7 +28,6 @@ const EDGES = [
   [12, 23], [13, 14], [13, 24], [14, 15], [14, 22], [15, 16], [16, 25], [16, 27], [17, 18],
   [17, 27], [18, 19], [18, 22], [19, 20],
 ];
-// Hold node id -> [x, z] it faces.
 export const HOLD_FACE = { 26: [-19, -13.5], 6: [-13, -13], 27: [16, 11], 25: [21, 10], 23: [0, 1.5], 21: [-24, -2], 22: [8, 2] };
 export const HOLD_NODES = { A: [26, 6], B: [27, 25], mid: [23, 21, 22] };
 export const SITE_NODES = { A: 4, B: 16 };
@@ -74,7 +71,6 @@ export function createMap(scene, random) {
     lamp: new THREE.MeshBasicMaterial({ color: 0xffe2b0 }),
   };
 
-  // box(): mesh + collider. visual(): mesh only.
   function box(cx, cy, cz, w, h, d, mat) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(cx, cy, cz);
@@ -91,7 +87,6 @@ export function createMap(scene, random) {
     return mesh;
   }
 
-  // Ground sheet over a dark apron.
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(68, 52),
     new THREE.MeshStandardMaterial({ map: groundTexture(random), roughness: 0.96 }),
@@ -105,13 +100,11 @@ export function createMap(scene, random) {
   apron.position.y = -0.02;
   scene.add(apron);
 
-  // Perimeter.
   box(0, 2, -26.3, 69, 4, 0.6, mats.siding);
   box(0, 2, 26.3, 69, 4, 0.6, mats.siding);
   box(-34.3, 2, 0, 0.6, 4, 53, mats.siding);
   box(34.3, 2, 0, 0.6, 4, 53, mats.siding);
 
-  // Furnace Hall (site A): east/south walls with door gaps.
   box(-13, 1.8, -20, 0.6, 3.6, 10, mats.concrete);
   box(-13, 1.8, -10.8, 0.6, 3.6, 3.6, mats.concrete);
   box(-25.5, 1.8, -9, 11, 3.6, 0.6, mats.concrete);
@@ -123,10 +116,8 @@ export function createMap(scene, random) {
   const chimney = visual(new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 7, 12), mats.metalDark));
   chimney.position.set(-26, 9, -20);
 
-  // Warehouse block, mid to A connector.
   box(-9.5, 2.25, -16, 5, 4.5, 6, mats.siding);
 
-  // Mid core: doors west and east, core machine inside.
   box(-5, 1.8, -3.1, 0.6, 3.6, 3.8, mats.concrete);
   box(-5, 1.8, 3.1, 0.6, 3.6, 3.8, mats.concrete);
   box(5, 1.8, -3.1, 0.6, 3.6, 3.8, mats.concrete);
@@ -137,12 +128,10 @@ export function createMap(scene, random) {
   box(0, 3.85, -3, 11, 0.35, 0.5, mats.metalDark);
   box(0, 3.85, 3, 11, 0.35, 0.5, mats.metalDark);
 
-  // Lane blocks.
   box(9.5, 2, 14, 5, 4, 6, mats.siding);
   box(17, 2, -19, 6, 4, 6, mats.concrete);
   box(-17, 2, 16, 6, 4, 6, mats.concrete);
 
-  // Tanks: round mesh, square collider.
   for (const [tx, tz] of [[-8, -22], [10, 21]]) {
     const tank = visual(new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 4.6, 16), mats.metal));
     tank.position.set(tx, 2.3, tz);
@@ -150,31 +139,26 @@ export function createMap(scene, random) {
     colliders[colliders.length - 1] = makeBox(tx, 2.3, tz, 3.2, 4.6, 3.2);
   }
 
-  // Tunnel run: inner wall, two entries, low roof.
   box(29.8, 1.8, -6.5, 0.6, 3.6, 3, mats.concrete);
   box(29.8, 1.8, 1.5, 0.6, 3.6, 7, mats.concrete);
   box(32, 2.95, 1, 4.8, 0.5, 19, mats.metalDark);
 
-  // Site B containers.
   box(18, 1.3, 12.5, 6, 2.6, 2.4, mats.containerRust);
   box(27, 1.3, 19, 2.4, 2.6, 6, mats.containerTeal);
   box(23, 1.3, 23.5, 6, 2.6, 2.4, mats.containerTeal);
   box(23, 3.9, 23.5, 6, 2.6, 2.4, mats.containerRust);
 
-  // Crates: singles, doubles you cannot see over, low slabs to crouch behind.
   const crate1 = [[-8, -12], [8, -2], [-2, 8], [12, 3.5], [14.5, 13], [-24, 6], [-6, 18], [24, -8], [2, -13], [-29, -11], [-15.5, -19]];
   for (const [x, z] of crate1) box(x, 0.575, z, 1.15, 1.15, 1.15, mats.crate);
   const crate2 = [[-4, -11], [20, -12], [-11, 4], [25, 5]];
   for (const [x, z] of crate2) { box(x, 0.575, z, 1.15, 1.15, 1.15, mats.crate); box(x, 1.725, z, 1.15, 1.15, 1.15, mats.crate); }
   const low = [[0, -9.5], [18.5, 16.5], [-20.5, -11], [10, -6]];
   for (const [x, z] of low) box(x, 0.275, z, 1.6, 0.55, 1.6, mats.crate);
-  // Half walls.
   box(-8, 0.575, 3.5, 0.5, 1.15, 3, mats.concrete);
   box(8, 0.575, -3.5, 0.5, 1.15, 3, mats.concrete);
   box(0, 0.575, 12.5, 3, 1.15, 0.5, mats.concrete);
   box(-22, 0.575, 2, 3, 1.15, 0.5, mats.concrete);
 
-  // Extra cover: [x, z, kind] 0 crate, 1 stack, 2 low slab, 3 barrier, 4 container.
   const extra = [[13, -13, 1], [-4, 16, 1], [16, -8, 1], [24, -13, 1], [-16, -1, 1], [26, 2, 0], [15, 19, 2], [-6, 13, 2], [-14, -22, 2], [-23, 12, 3], [4, 15, 3], [21, 3, 4]];
   for (const [x, z, k] of extra) {
     if (k < 2) { box(x, .575, z, 1.15, 1.15, 1.15, mats.crate); if (k) box(x, 1.725, z, 1.15, 1.15, 1.15, mats.crate); }
@@ -183,7 +167,6 @@ export function createMap(scene, random) {
     else box(x, 1.3, z, 6, 2.6, 2.4, mats.containerTeal);
   }
 
-  // Lamp poles.
   for (const [x, z] of [[-12, -2], [12, -12], [-2, 20], [20, -2]]) {
     const pole = visual(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.4, 8), mats.metalDark));
     pole.position.set(x, 2.2, z);
@@ -193,7 +176,6 @@ export function createMap(scene, random) {
     colliders.push(makeBox(x, 2.2, z, 0.24, 4.4, 0.24));
   }
 
-  // Skyline beyond the fence.
   const skyline = [[-44, -20, 10, 12], [40, -30, 12, 14], [0, -44, 30, 10], [-46, 16, 8, 8], [44, 24, 10, 10], [12, 42, 26, 9], [-20, 44, 18, 10]];
   for (const [x, z, w, h] of skyline) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 8), mats.dark);
@@ -209,7 +191,6 @@ export function createMap(scene, random) {
     scene.add(beacon);
   }
 
-  // Light: warm sun with shadows, cool fill, three point lights.
   const hemi = new THREE.HemisphereLight(0xbcd3e6, 0x5a5040, 1.1);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(PALETTE.sun, 2.7);
@@ -224,7 +205,6 @@ export function createMap(scene, random) {
   sun.shadow.camera.far = 130;
   sun.shadow.bias = -0.0006;
   scene.add(sun);
-  // Shadowless fill.
   const fill = new THREE.DirectionalLight(0xdfeaf5, 0.5);
   fill.position.set(-30, 24, 26);
   scene.add(fill);
@@ -239,5 +219,8 @@ export function createMap(scene, random) {
   scene.add(coreLight);
 
   const graph = buildGraph();
-  return { colliders, nodes: graph.nodes, nextHop: graph.nextHop, sites: SITES, spawns: SPAWNS };
+  return {
+    colliders, nodes: graph.nodes, nextHop: graph.nextHop, sites: SITES, spawns: SPAWNS,
+    sky: { hemi, sun, fill, lamps: [hallLight, tunnelLight, coreLight], lampBase: [60, 30, 36] },
+  };
 }

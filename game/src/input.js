@@ -1,49 +1,56 @@
-// Keyboard and mouse, and the pointer lock that turns the mouse into look. Plain browser
-// APIs only: the game asks the canvas for pointer lock and reads movementX/Y while it holds it.
+// Keyboard and mouse, and the pointer lock that turns the mouse into look. Discrete presses
+// (buy keys, weapon swaps, the interact key) are queued separately from held keys so the
+// fixed-step simulation can consume each press exactly once.
 export function createInput(canvas, onLockChange) {
   const keys = new Set();
-  const state = { keys, locked: false, firing: false, lookX: 0, lookY: 0 };
+  const pressed = new Set();
+  const state = { keys, locked: false, firing: false, aiming: false, lookX: 0, lookY: 0, wheel: 0 };
 
-  function setKey(event, down) {
-    if (down) keys.add(event.code);
-    else keys.delete(event.code);
-    if (event.code === 'Space') event.preventDefault();
-  }
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Tab') e.preventDefault();
+    if (!e.repeat) pressed.add(e.code);
+    keys.add(e.code);
+  });
+  window.addEventListener('keyup', (e) => keys.delete(e.code));
+  window.addEventListener('blur', () => { keys.clear(); state.firing = false; state.aiming = false; });
 
-  window.addEventListener('keydown', (event) => setKey(event, true));
-  window.addEventListener('keyup', (event) => setKey(event, false));
-  window.addEventListener('blur', () => keys.clear());
-  window.addEventListener('mousemove', (event) => {
+  canvas.addEventListener('mousedown', (e) => {
     if (!state.locked) return;
-    state.lookX += event.movementX;
-    state.lookY += event.movementY;
+    if (e.button === 0) state.firing = true;
+    if (e.button === 2) state.aiming = true;
   });
-  window.addEventListener('mousedown', (event) => {
-    if (state.locked && event.button === 0) state.firing = true;
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) state.firing = false;
+    if (e.button === 2) state.aiming = false;
   });
-  window.addEventListener('mouseup', (event) => {
-    if (event.button === 0) state.firing = false;
-  });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('wheel', (e) => { if (state.locked) state.wheel += Math.sign(e.deltaY); }, { passive: true });
+
   document.addEventListener('pointerlockchange', () => {
     state.locked = document.pointerLockElement === canvas;
-    if (!state.locked) {
-      keys.clear();
-      state.firing = false;
-    }
+    if (!state.locked) { state.firing = false; state.aiming = false; }
     onLockChange(state.locked);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!state.locked) return;
+    state.lookX += e.movementX;
+    state.lookY += e.movementY;
   });
 
   return {
     state,
-    requestLock() {
-      canvas.requestPointerLock();
-    },
+    requestLock() { canvas.requestPointerLock(); },
     takeLook() {
-      const x = state.lookX;
-      const y = state.lookY;
+      const look = { x: state.lookX, y: state.lookY };
       state.lookX = 0;
       state.lookY = 0;
-      return { x, y };
+      return look;
     },
+    wasPressed(code) {
+      if (!pressed.has(code)) return false;
+      pressed.delete(code);
+      return true;
+    },
+    clearPressed() { pressed.clear(); },
   };
 }

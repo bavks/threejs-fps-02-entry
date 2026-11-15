@@ -43,12 +43,19 @@ export function groundTexture(random) {
   ctx.fillRect(px(-34), pz(-26), 24 * m, 20 * m);
   ctx.fillRect(px(-8), pz(-8), 16 * m, 16 * m);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(228,222,202,0.14)';
-  for (let i = 0; i < 34; i++) for (let j = 0; j < 26; j++) if ((i + j) % 2 === 0) ctx.fillRect(px(2 * i - 34), pz(2 * j - 26), 2 * m, 2 * m);
-  ctx.strokeStyle = 'rgba(20,20,20,0.4)';
-  ctx.lineWidth = 2;
-  for (let x = -32; x < 34; x += 2) { ctx.beginPath(); ctx.moveTo(px(x), 0); ctx.lineTo(px(x), H); ctx.stroke(); }
-  for (let z = -24; z < 26; z += 2) { ctx.beginPath(); ctx.moveTo(0, pz(z)); ctx.lineTo(W, pz(z)); ctx.stroke(); }
+  for (let j = 0; j < 52; j++) {
+    const off = (j % 2) * m;
+    for (let i = -1; i < 35; i++) {
+      const h = (i * 37 + j * 91) % 7;
+      if (h === 3) continue;
+      ctx.fillStyle = h < 3 ? 'rgba(235,230,215,0.08)' : 'rgba(8,8,10,0.09)';
+      ctx.fillRect(px(2 * i - 34) - off, pz(j - 26), 2 * m, H / 52);
+    }
+  }
+  ctx.strokeStyle = 'rgba(22,20,18,0.55)';
+  ctx.lineWidth = 3;
+  for (let z = -25; z < 26; z += 1) { ctx.beginPath(); ctx.moveTo(0, pz(z)); ctx.lineTo(W, pz(z)); ctx.stroke(); }
+  for (let j = 0; j < 52; j++) for (let x = -34 - (j % 2); x <= 34; x += 2) { ctx.beginPath(); ctx.moveTo(px(x), pz(j - 26)); ctx.lineTo(px(x), pz(j - 25)); ctx.stroke(); }
   for (let i = 0; i < 26; i++) {
     const x = random() * W;
     const y = random() * H;

@@ -68,8 +68,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--canvas);color:va
 .load-item .buy-key{width:19px;height:19px;display:grid;place-items:center;border:1px solid var(--hairline);border-radius:4px;font-size:11px;color:var(--muted);}
 .load-item.sel{border-color:var(--accent);color:var(--accent);}
 
-#money{position:fixed;top:16px;right:22px;font-family:var(--font-readout);font-size:22px;color:#9fd48a;text-shadow:0 1px 4px rgba(0,0,0,.7);}
-#money-pop{position:fixed;top:48px;right:22px;z-index:6;text-align:right;font-family:var(--font-readout);pointer-events:none;}
+#money{position:fixed;left:24px;bottom:78px;font-family:var(--font-readout);font-size:25px;color:#9fd48a;text-shadow:0 1px 4px rgba(0,0,0,.7);}
+#money-pop{position:fixed;left:24px;bottom:114px;z-index:6;text-align:left;font-family:var(--font-readout);pointer-events:none;}
 #money-pop .pop{font-size:15px;font-weight:700;color:#9fd48a;animation:mpop 1.4s ease-out forwards;}
 #money-pop .pop.neg{color:var(--danger);}
 @keyframes mpop{0%{opacity:0;transform:translateY(6px);} 15%{opacity:1;} 70%{opacity:1;} 100%{opacity:0;transform:translateY(-14px);} }

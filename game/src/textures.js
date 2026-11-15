@@ -1,4 +1,4 @@
-// Procedural canvas textures, painted once at boot — the game ships no image files.
+// Procedural canvas textures, painted at boot.
 import * as THREE from 'three';
 
 function canvas(w, h) {

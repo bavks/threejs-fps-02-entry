@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IRONFALL — a three.js tactical FPS</title>
 <style>
-/* Look:slate and concrete, rust against teal, one hazard accent. */
 :root{
     --canvas:#14161a;
     --surface:#1e2228;
@@ -26,7 +25,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #hud{ position:fixed;inset:0;pointer-events:none;}
 .readout{ font-family:var(--font-readout);}
 
-/* Crosshair:four ticks whose gap tracks the gun's live spread. */
 #crosshair{ --gap:6px;position:fixed;left:50%;top:50%;width:0;height:0;}
 #crosshair i{ position:absolute;background:var(--ink);box-shadow:0 0 3px rgba(0,0,0,.8);}
 #crosshair i:nth-child(1){ left:-1px;top:calc(-9px - var(--gap));width:2px;height:8px;}
@@ -47,7 +45,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #hit-dir{ position:fixed;left:50%;top:50%;width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;border:4px solid transparent;border-top-color:var(--danger);opacity:0;}
 #hit-dir.show{ opacity:.9;}
 
-/* Top centre:the score bar. */
 #topbar{ position:fixed;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:2px;font-family:var(--font-readout);}
 #topbar .side{ min-width:118px;padding:6px 12px;background:rgba(20,22,26,.72);text-align:center;}
 #topbar .side small{ display:block;font-size:10px;letter-spacing:.18em;color:var(--muted);}
@@ -63,7 +60,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #bomb-status.show{ opacity:1;animation:pulse 1s infinite;}
 @keyframes pulse{ 50%{ background:rgba(120,20,14,.75);}}
 
-/* Range readout and the deathmatch spawn bar. */
 #range-info{ position:fixed;top:74px;left:50%;transform:translateX(-50%);padding:5px 14px;border:1px solid var(--teal);border-radius:4px;background:rgba(10,32,34,.66);color:#bfe6e9;font-family:var(--font-readout);font-size:13px;letter-spacing:.1em;opacity:0;transition:opacity .2s;white-space:nowrap;}
 #range-info.show{ opacity:1;}
 #loadout{ position:fixed;bottom:104px;left:50%;transform:translateX(-50%);display:none;gap:6px;pointer-events:auto;}
@@ -72,7 +68,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 .load-item .buy-key{ width:19px;height:19px;display:grid;place-items:center;border:1px solid var(--hairline);border-radius:4px;font-size:11px;color:var(--muted);}
 .load-item.sel{ border-color:var(--accent);color:var(--accent);}
 
-/* Top right:money and the killfeed. */
 #money{ position:fixed;top:16px;right:22px;font-family:var(--font-readout);font-size:22px;color:#9fd48a;text-shadow:0 1px 4px rgba(0,0,0,.7);}
 #killfeed{ position:fixed;top:52px;right:22px;display:grid;gap:4px;justify-items:end;font-family:var(--font-readout);font-size:12.5px;}
 #killfeed .kill{ padding:4px 9px;background:rgba(20,22,26,.72);border-radius:4px;transition:opacity .4s;white-space:nowrap;}
@@ -80,7 +75,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #killfeed .k0{ color:#eda273;} #killfeed .k1{ color:#7fc6cc;}
 #killfeed .hs{ color:var(--accent);}
 
-/* Bottom corners:health and ammo. */
 #healthwrap{ position:fixed;left:24px;bottom:22px;width:230px;}
 #health-num{ font-family:var(--font-readout);font-size:34px;line-height:1;}
 #armor-num{ font-family:var(--font-readout);font-size:12px;color:var(--muted);letter-spacing:.1em;margin-left:8px;}
@@ -97,11 +91,18 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #carrier-tag{ position:fixed;bottom:118px;left:50%;transform:translateX(-50%);padding:4px 12px;border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-family:var(--font-readout);font-size:12.5px;letter-spacing:.1em;opacity:0;transition:opacity .2s;}
 #carrier-tag.show{ opacity:1;}
 
-/* Centre announcements, prompts and the channel bar. */
 #banner{ position:fixed;top:24%;left:0;right:0;text-align:center;opacity:0;transform:translateY(6px);transition:opacity .25s, transform .25s;}
 #banner.show{ opacity:1;transform:none;}
 #banner-title{ font-size:44px;font-weight:700;letter-spacing:.04em;text-shadow:0 2px 14px rgba(0,0,0,.8);}
 #banner-sub{ margin-top:4px;font-size:16px;color:var(--muted);text-shadow:0 1px 8px rgba(0,0,0,.8);}
+#callout{ position:fixed;top:31%;left:0;right:0;text-align:center;opacity:0;pointer-events:none;}
+#callout.show{ animation:callout-pop 1.6s ease-out forwards;}
+#callout.still{ animation:none;opacity:1;}
+#callout-title{ font-size:54px;font-weight:800;letter-spacing:.05em;color:var(--accent);text-shadow:0 2px 16px rgba(0,0,0,.85);}
+#callout.hot #callout-title{ color:#ff6a2a;text-shadow:0 0 24px rgba(255,60,10,.65),0 2px 14px rgba(0,0,0,.8);}
+#callout-sub{ margin-top:2px;font-size:16px;color:var(--muted);text-shadow:0 1px 8px rgba(0,0,0,.8);}
+@keyframes callout-pop{ 0%{opacity:0;transform:scale(1.65);} 10%{opacity:1;transform:scale(1);} 80%{opacity:1;} 100%{opacity:0;transform:scale(.97);} }
+#killfeed .co{ color:#ff6a2a;font-weight:700;}
 #prompt{ position:fixed;bottom:27%;left:0;right:0;text-align:center;font-size:16.5px;color:var(--ink);text-shadow:0 1px 6px rgba(0,0,0,.9);opacity:0;transition:opacity .15s;}
 #prompt.show{ opacity:1;}
 #prompt kbd{ padding:1px 7px;border:1px solid var(--hairline);border-bottom-width:2px;border-radius:4px;background:var(--surface2);font-family:var(--font-readout);font-size:13px;}
@@ -113,13 +114,9 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #spectate{ position:fixed;bottom:15%;left:0;right:0;text-align:center;font-size:16px;color:var(--muted);opacity:0;}
 #spectate.show{ opacity:1;}
 
-/* Full-screen flashes and the scope. */
 #damage-flash{ position:fixed;inset:0;background:radial-gradient(ellipse at center, transparent 42%, rgba(190,30,20,.5) 100%);opacity:0;transition:opacity .1s;}
 #damage-flash.on{ opacity:1;}
 #blind-flash{ position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;}
-/* The optics. A closed scope is a circular lens — black outside, a fine crosshair with
-     mil-dots and the zoom inside. The reflex sight (.dot) is an open framed window with a
-     dimmed surround and one bright dot. */
 #scope{ position:fixed;inset:0;opacity:0;transition:opacity .12s;}
 #scope.show{ opacity:1;}
 #scope .lens{ position:absolute;left:50%;top:50%;width:76vmin;height:76vmin;transform:translate(-50%, -50%);border-radius:50%;overflow:hidden;border:3px solid rgba(0,0,0,.92);box-shadow:0 0 0 120vmax rgba(2,3,4,.985), inset 0 0 7vmin rgba(0,0,0,.5);}
@@ -135,7 +132,6 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 #scope.dot .ret-c{ width:8px;height:8px;margin:-4px 0 0 -4px;background:#ff2d16;box-shadow:0 0 9px 2px rgba(255,45,22,.75);}
 #scope.dot #scope-zoom{ color:rgba(236,231,219,.85);right:4%;bottom:3%;}
 
-/* Overlays:menu, buy, pause, match over, scoreboard. */
 .overlay{ position:fixed;inset:0;display:none;place-items:center;padding:22px;background:rgba(13,15,18,.78);backdrop-filter:blur(3px);z-index:5;}
 .overlay.show{ display:grid;}
 .panel{ width:min(560px, 100%);max-height:92vh;overflow:auto;padding:30px 34px;background:var(--surface);border:1px solid var(--hairline);border-top:3px solid var(--accent);border-radius:8px;box-shadow:0 24px 60px rgba(0,0,0,.55);}
@@ -225,6 +221,7 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 
 <div id="carrier-tag">YOU HAVE THE CHARGE — PLANT AT A SITE</div>
 <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
+<div id="callout"><div id="callout-title"></div><div id="callout-sub"></div></div>
 <div id="prompt"></div>
 <div id="channel"><div id="channel-label"></div><div id="channel-track"><div id="channel-fill"></div></div></div>
 <div id="spectate"></div>

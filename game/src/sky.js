@@ -1,10 +1,7 @@
-// Sky: four presets — Blue Sky, Cloudy, Sunset, Night — driving a gradient dome, the
-// fog, the sun, the fill lights and the yard lamps as one mood, cross-faded over a
-// few seconds. K cycles by hand; rounds and the clock cycle for you.
+// Sky: Blue Sky, Cloudy, Sunset, Night — one mood; K cycles it.
 import * as THREE from 'three';
 
-// [top, horizon, fog, fogNear, fogFar, sun, sunIntensity, sunPos, hemiSky, hemiGround,
-//  hemiIntensity, fillIntensity, lampGain, exposure, sunGlow]
+// [top, horizon, fog, near, far, sun, sunI, pos, hemiSky, hemiGround, hemiI, fillI, lamp, exposure, glow]
 const SKIES = [
   [0x527a9e,0xa9c3d8,0x9db2c2,34,115,0xffd9a3,2.7,[34,42,-20],0xbcd3e6,0x5a5040,1.1,0.5,1,1.22,0.55],
   [0x66727c,0xb4babd,0xa3adb2,24,82,0xe9e5db,1.0,[16,40,16],0xc3ccd2,0x5c574e,1.3,0.6,1.35,1.1,0.1],

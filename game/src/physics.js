@@ -1,4 +1,4 @@
-// Axis-aligned box physics. A collider is { minX, maxX, minY, maxY, minZ, maxZ }.
+// AABB physics. Colliders are { minX, maxX, minY, maxY, minZ, maxZ }.
 
 export function makeBox(cx, cy, cz, w, h, d) {
   return {

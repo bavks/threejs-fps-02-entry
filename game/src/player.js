@@ -1,5 +1,4 @@
-// The player's body: mouse look with a recoil punch, wish-direction movement from the
-// camera yaw. Physics is the shared actor step — this only translates input to intent.
+// The player's body: mouse look, movement, intent.
 import { stepLocomotion, eyeHeight } from './actors.js';
 import { currentGun, currentZoom } from './weapons.js';
 
@@ -59,7 +58,6 @@ export function createPlayerController(actor) {
       const wasAir = !a.onGround;
       const vy = a.vel.y;
       stepLocomotion(a, wishX, wishZ, speed, input.state.keys.has('Space'), dt, colliders);
-      // Landing dip and strafe lean: camera-only springs fed by the step just taken.
       if (wasAir && a.onGround) ctl.landDip = Math.min(0.55, -vy * 0.045);
       ctl.landDip = Math.max(0, ctl.landDip - dt * 2.4);
       const lat = a.vel.x * cos - a.vel.z * sin; // speed along the camera's right

@@ -1,5 +1,4 @@
-// Audio: every sound is synthesised with WebAudio — no audio files. World sounds are
-// placed by distance and bearing.
+// Audio: synthesised WebAudio, placed by distance and bearing.
 export function createAudio() {
   let ctx = null;
   let master = null;

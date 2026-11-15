@@ -1,4 +1,4 @@
-// Effects: everything transient and visual, all pooled — nothing allocated per frame.
+// Effects: everything transient, all pooled.
 import * as THREE from 'three';
 import { moveBody } from './physics.js';
 

@@ -1,4 +1,4 @@
-// IRONFALL palette: warm rust against slate teal. Teams read by colour alone.
+// Palette: rust against slate teal; teams read by colour.
 export const PALETTE = {
   sky: 0x7f9db8,
   fog: 0x9db2c2,

@@ -1,5 +1,4 @@
-// Bot brains. A brain writes intent onto its actor; main.js actuates it. In staggered
-// ticks brains perceive (vision, line of sight, hearing), then act on the graph.
+// Bot brains: intent written onto actors; main.js actuates.
 import { lineOfSight } from './physics.js';
 import { eyeHeight } from './actors.js';
 import { WEAPONS } from './weapons.js';

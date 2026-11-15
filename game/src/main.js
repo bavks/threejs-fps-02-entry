@@ -1,5 +1,4 @@
-// IRONFALL — boot and the one loop. A fixed 60 Hz simulation feeds a render at the
-// display's rate; player and bots share one combat path. ?shot=1..4 stages a screenshot.
+// IRONFALL — boot and the one loop: a fixed 60 Hz sim.
 import * as THREE from 'three';
 import { PALETTE, TEAM_NAMES } from './palette.js';
 import { mulberry32 } from './rng.js';
@@ -45,7 +44,6 @@ const audio = createAudio();
 const effects = createEffects(scene, glowTexture());
 const bombProp = createBombProp(scene);
 
-// --- Cast ---
 const BOT_NAMES = ['Vex', 'Onyx', 'Rurik', 'Sable', 'Koda', 'Miro', 'Talon', 'Ash', 'Reyes'];
 const player = createActor(0, 'You', true);
 const actors = [player];
@@ -96,7 +94,6 @@ function showViewmodel(id) {
 }
 showViewmodel('wren');
 
-// --- Practice range ---
 const LINE = { x: -33, z: -24.6, yaw: -Math.PI / 2 };
 const RANGE_SPOTS = [[-23, -24.6, 10], [-8, -24.6, 25], [17, -24.6, 50], [32, -24.6, 65]];
 const range = { built: false, targets: [], hits: 0, hs: 0, last: '' };
@@ -142,7 +139,7 @@ function rangeHit(target, dmg, metres, part) {
   const head = part === 'head';
   if (head) range.hs += 1;
   const down = target.health <= 0;
-  if (down) { target.alive = false; target.health = 0; target.respawnT = 3; }
+  if (down) { target.alive = false; target.health = 0; target.respawnT = 3; playerCallout(head, false); }
   range.last = `${head ? 'HEADSHOT · ' : ''}HIT ${Math.round(dmg)} DMG · ${metres} M${down ? ' · TARGET DOWN' : ''}`;
   hud.hitmarker(down);
   audio.hit(head);
@@ -179,7 +176,6 @@ function grantRangeGun(id) {
   range.last = `${WEAPONS[id].name.toUpperCase()} · ${WEAPONS[id].blurb}`;
 }
 
-// --- Combat ---
 const tmpDir = new THREE.Vector3();
 const tmpOrigin = new THREE.Vector3();
 let shake = 0;
@@ -215,6 +211,21 @@ function applyDamage(target, amount, attacker, part) {
   if (target.health <= 0) killActor(target, attacker, part === 'head');
 }
 
+// Kill callouts: player streaks and first blood pick the banner.
+const streaks = { kills: 0, hs: 0, blood: false };
+const STREAK_NAMES = ['', '', 'DOUBLE KILL', 'TRIPLE KILL', 'CHAIN KILLER', 'RAMPAGE', 'MASSACRE', 'UNSTOPPABLE'];
+const CHAIN_NAMES = ['', '', 'CHAIN HEADSHOT', 'HEADSHOT RAMPAGE', 'DEADEYE'];
+function resetStreaks() { streaks.kills = 0; streaks.hs = 0; streaks.blood = false; }
+function playerCallout(headshot, blood) {
+  streaks.kills += 1;
+  streaks.hs = headshot ? streaks.hs + 1 : 0;
+  if (blood) { hud.callout('FIRST BLOOD', false); return 'FIRST BLOOD'; }
+  if (streaks.hs >= 2) { const t = CHAIN_NAMES[Math.min(streaks.hs, 4)]; hud.callout(t, true); return t; }
+  if (streaks.kills >= 2) { const t = STREAK_NAMES[Math.min(streaks.kills, 7)]; hud.callout(t, false); return t; }
+  if (headshot) { hud.callout('HEADSHOT', true); return 'HEADSHOT'; }
+  return '';
+}
+
 function killActor(victim, attacker, headshot) {
   victim.alive = false;
   victim.health = 0;
@@ -223,7 +234,13 @@ function killActor(victim, attacker, headshot) {
   const kName = attacker ? attacker.name : '—';
   const kc = attacker ? `k${attacker.team}` : '';
   const vc = `k${victim.team}`;
-  hud.addKill(`<span class="${kc}">${kName}</span> ▸ ${wName}${headshot ? ' <span class="hs">HEADSHOT</span>' : ''} ▸ <span class="${vc}">${victim.name}</span>`);
+  let call = '';
+  const blood = !streaks.blood && match.mode !== 'range';
+  if (blood) streaks.blood = true;
+  if (attacker && attacker.isPlayer && victim !== attacker) call = playerCallout(headshot, blood);
+  else if (blood && attacker) hud.callout('FIRST BLOOD', false, kName);
+  if (victim.isPlayer) { streaks.kills = 0; streaks.hs = 0; }
+  hud.addKill(`<span class="${kc}">${kName}</span> ▸ ${wName}${headshot ? ' <span class="hs">HEADSHOT</span>' : ''}${call ? ` <span class="co">${call}</span>` : ''} ▸ <span class="${vc}">${victim.name}</span>`);
   if (attacker && attacker.isPlayer) audio.kill();
   if (victim.isPlayer) {
     hud.setSpectate(match.mode === 'defusal'
@@ -420,7 +437,6 @@ function onGrenade(g) {
   }
 }
 
-// --- Actuation ---
 let simNow = 0;
 let skyClock = 0; // seconds since the last automatic sky change (continuous modes)
 let playing = false;
@@ -475,7 +491,7 @@ function step(dt) {
   if (match.mode === 'range') stepRange(dt);
   effects.update(dt, map.colliders, onGrenade);
   match.step(dt);
-  // The sky turns over every two minutes here; defusal turns it per round instead.
+  // Continuous modes turn the sky every two minutes.
   if (match.mode !== 'defusal') {
     skyClock += dt;
     if (skyClock > 120) { skyClock = 0; sky.cycle(); }
@@ -489,7 +505,6 @@ function step(dt) {
   }
 }
 
-// --- Round events → HUD, audio, models ---
 function bannerForRound() {
   const atk = player.team === 0;
   hud.banner(
@@ -626,11 +641,11 @@ function drainEvents() {
   }
 }
 
-// --- Input wiring ---
 hud.onPlay = (mode) => {
   audio.unlock();
   hud.hideMenu();
   hud.hideOver();
+  resetStreaks();
   match.startMode(mode || 'defusal');
   playing = true;
   input.requestLock();
@@ -639,6 +654,7 @@ hud.onResume = () => { hud.hidePause(); input.requestLock(); };
 hud.onRestart = () => {
   hud.hidePause();
   hud.hideOver();
+  resetStreaks();
   match.startMode(match.mode);
   playing = true;
   input.requestLock();
@@ -741,7 +757,6 @@ function handleKeys() {
   else hud.hideBoard();
 }
 
-// --- HUD sync ---
 const fmtTime = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
 function syncHud() {
@@ -806,7 +821,6 @@ function syncHud() {
   hud.setScope(ads, def.optic, ads && def.zooms ? `${currentZoom(player, def)}×` : '');
 }
 
-// --- Camera and render ---
 function syncCamera(dt) {
   if (player.alive) {
     controller.eyePos(camera.position);
@@ -898,7 +912,6 @@ function frame(nowMs) {
   renderer.render(scene, camera);
 }
 
-// --- Staged screenshots ---
 function faceToward(a, x, z) {
   a.yaw = Math.atan2(-(x - a.pos.x), -(z - a.pos.z));
   a.intent.faceYaw = a.yaw;
@@ -951,8 +964,10 @@ function stageShot(n) {
     setModelGun(onyx, 'harrier');
     place(rurik, 24.8, 20.8, player.pos.x, player.pos.z);
     match.scores = [17, 12];
-    hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> ▸ <span class="k1">Koda</span>');
+    hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> <span class="co">CHAIN HEADSHOT</span> ▸ <span class="k1">Koda</span>');
     hud.addKill('<span class="k0">Vex</span> ▸ BR-3 Jackdaw ▸ <span class="k1">Talon</span>');
+    hud.callout('CHAIN HEADSHOT', true);
+    hud.els.callout.classList.add('still');
     hud.hitmarker(false);
     const m1 = muzzlePos(player, new THREE.Vector3());
     effects.tracer(m1.x, m1.y, m1.z, 21.8, 1.1, 16.1);

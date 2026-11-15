@@ -1,4 +1,4 @@
-// A tiny seeded RNG (mulberry32): staged shots seed it fixed, live play by the clock.
+// Seeded RNG (mulberry32), fixed for staged shots.
 export function mulberry32(initial) {
   let a = initial | 0;
   return function random() {

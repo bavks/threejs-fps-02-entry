@@ -1,4 +1,4 @@
-// Actors: every combatant is one of these — body, health, loadout, score, model.
+// Actors: every combatant — body, health, loadout, score.
 import * as THREE from 'three';
 import { PALETTE, TEAM_COLORS } from './palette.js';
 import { makeBox, moveBody, rayBox } from './physics.js';
@@ -63,7 +63,6 @@ export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, coll
   actor.speed2d = Math.hypot(actor.vel.x, actor.vel.z);
 }
 
-// --- Bot models ---
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a186, roughness: 0.8 });
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7, metalness: 0.3 });
 

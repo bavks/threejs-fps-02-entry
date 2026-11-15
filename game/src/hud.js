@@ -1,5 +1,4 @@
-// The HUD: every DOM element the game talks to. It renders state pushed in by main.js
-// and owns no game state.
+// The HUD: every DOM element the game talks to.
 import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -32,6 +31,7 @@ export function createHud() {
     ammoMag: $('ammo-mag'), ammoReserve: $('ammo-reserve'), ammoName: $('ammo-name'), ammo: $('ammo'),
     money: $('money'), timer: $('timer'), score0: $('score-0'), score1: $('score-1'), roundLabel: $('round-label'),
     killfeed: $('killfeed'), banner: $('banner'), bannerTitle: $('banner-title'), bannerSub: $('banner-sub'),
+    callout: $('callout'), calloutTitle: $('callout-title'), calloutSub: $('callout-sub'),
     prompt: $('prompt'), channelWrap: $('channel'), channelFill: $('channel-fill'), channelLabel: $('channel-label'),
     bombStatus: $('bomb-status'), damage: $('damage-flash'), blind: $('blind-flash'), hitdir: $('hit-dir'),
     crosshair: $('crosshair'), hitmarker: $('hitmarker'), scope: $('scope'), scopeZoom: $('scope-zoom'), spectate: $('spectate'),
@@ -41,6 +41,7 @@ export function createHud() {
     label0: $('label-0'), label1: $('label-1'), loadout: $('loadout'), rangeInfo: $('range-info'),
   };
   let bannerTimer = 0;
+  let calloutTimer = 0;
 
   const hud = {
     els,
@@ -115,6 +116,16 @@ export function createHud() {
       els.banner.classList.add('show');
       clearTimeout(bannerTimer);
       bannerTimer = setTimeout(() => els.banner.classList.remove('show'), ms);
+    },
+    callout(title, hot, sub) {
+      els.calloutTitle.textContent = title;
+      els.calloutSub.textContent = sub || '';
+      els.callout.classList.toggle('hot', !!hot);
+      els.callout.classList.remove('show');
+      void els.callout.offsetWidth;
+      els.callout.classList.add('show');
+      clearTimeout(calloutTimer);
+      calloutTimer = setTimeout(() => els.callout.classList.remove('show'), 1650);
     },
     prompt(text) {
       if (text) { els.prompt.textContent = text; els.prompt.classList.add('show'); }

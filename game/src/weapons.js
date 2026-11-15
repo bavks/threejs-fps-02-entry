@@ -1,5 +1,4 @@
-// Weapons: nine guns with distinct jobs, plus grenades and armour. The numbers are the
-// game — headshots, falloff, spread. This module owns the data, the maths, the models.
+// Weapons: nine guns, grenades, armour — data, maths, models.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -100,7 +99,6 @@ export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloom
   return (deg * Math.PI) / 180;
 }
 
-// --- Gun models ---
 const gunMats = {
   body: new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.45, metalness: 0.7 }),
   grip: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 }),

@@ -1,5 +1,4 @@
-// The Foundry: one original map — furnace hall (site A), rail yard (site B), mid core.
-// Every solid is an AABB collider; bots path on the graph.
+// The Foundry: furnace hall (A), rail yard (B), mid core.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 import { makeBox } from './physics.js';

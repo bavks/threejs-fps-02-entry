@@ -1,5 +1,4 @@
-// Rounds: the matches. One state machine owns phase, clocks, bomb, economies and
-// scores for every mode; it pushes events main.js drains into HUD and effects.
+// Rounds: one state machine — phase, clocks, bomb, scores.
 import { WEAPONS, GRENADES, ARMOR, createLoadout } from './weapons.js';
 import { HOLD_NODES, SITE_NODES, SITES, SPAWNS } from './map.js';
 

@@ -78,37 +78,59 @@ export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, coll
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a186, roughness: 0.8 });
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7, metalness: 0.3 });
 
-function limb(mat, w, h, d, x, y, z) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+// One rounded part: capsule limbs, sphere joints and head, squashed-sphere torso and vest.
+function part(mat, geo, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1) {
+  const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
+  m.rotation.x = rx;
+  m.scale.set(sx, sy, sz);
   m.castShadow = true;
   return m;
 }
 
-// A soldier from boxes: legs that swing, a team-colour torso, a dark vest, helmet, and a gun
-// carried in both hands at the aim pitch. Built once per bot and posed every frame.
+// A soldier, rounded: capsule legs that swing from the hip, a capsule torso under a rounded
+// vest, sphere shoulders and kneepads, and a sphere head with a visor band under a dome
+// helmet, gun carried in both hands at the aim pitch. Every pose anchor (hip pivots, arm
+// pivot) and overall dimension matches the boxy original, and the silhouette still fills
+// the hitboxes — which are computed from the actor, never from this model. One anchor did
+// move: the gun mount used to sit at y 1.32 inside the arm pivot (y 1.34), floating the gun
+// a metre over the helmet; it now sits at the arm's end, in the hands, as the pose code
+// always described. Presentation only — shot rays still start at the eye. Built once per
+// bot and posed every frame.
 export function buildActorModel(actor) {
   const teamMat = new THREE.MeshStandardMaterial({ color: TEAM_COLORS[actor.team], roughness: 0.75 });
   const teamDark = new THREE.MeshStandardMaterial({ color: actor.team === 0 ? PALETTE.jackalDark : PALETTE.wardenDark, roughness: 0.8 });
   const g = new THREE.Group();
-  const legL = limb(teamDark, 0.16, 0.78, 0.19, -0.11, 0.39, 0);
-  const legR = limb(teamDark, 0.16, 0.78, 0.19, 0.11, 0.39, 0);
-  legL.geometry.translate(0, -0.39, 0); legL.position.y = 0.78;
-  legR.geometry.translate(0, -0.39, 0); legR.position.y = 0.78;
-  const torso = limb(teamMat, 0.46, 0.62, 0.26, 0, 1.09, 0);
-  const vest = limb(darkMat, 0.5, 0.4, 0.3, 0, 1.12, 0);
-  const head = limb(skinMat, 0.26, 0.28, 0.26, 0, 1.56, 0);
-  const helmet = limb(teamDark, 0.32, 0.13, 0.32, 0, 1.71, 0);
+  const legGeo = new THREE.CapsuleGeometry(0.08, 0.62, 4, 14);
+  legGeo.translate(0, -0.39, 0); // pivot at the hip, as the boxy legs had
+  const bootGeo = new THREE.SphereGeometry(0.08, 16, 12);
+  const kneeGeo = new THREE.SphereGeometry(0.07, 14, 10);
+  const mkLeg = (x) => {
+    const leg = part(teamDark, legGeo, x, 0.78, 0, 0, 1, 1, 1.19);
+    leg.add(part(darkMat, bootGeo, 0, -0.735, -0.03, 0, 1, 0.55, 1.1)); // boot rides the swing
+    leg.add(part(darkMat, kneeGeo, 0, -0.4, -0.055, 0, 1, 1, 0.55)); // kneepad
+    return leg;
+  };
+  const legL = mkLeg(-0.11);
+  const legR = mkLeg(0.11);
+  const torso = part(teamMat, new THREE.CapsuleGeometry(0.13, 0.36, 6, 18), 0, 1.09, 0, 0, 1.77);
+  const vest = part(darkMat, new THREE.CapsuleGeometry(0.15, 0.1, 6, 18), 0, 1.12, 0, 0, 1.67);
+  const shoulderGeo = new THREE.SphereGeometry(0.085, 18, 14);
+  const shoulderL = part(teamMat, shoulderGeo, -0.255, 1.33, 0);
+  const shoulderR = part(teamMat, shoulderGeo, 0.255, 1.33, 0);
+  const head = part(skinMat, new THREE.SphereGeometry(0.15, 22, 16), 0, 1.56, 0, 0, 1, 1.06);
+  const visor = part(darkMat, new THREE.SphereGeometry(0.13, 20, 14), 0, 1.575, -0.07, 0, 1.05, 0.4, 0.75);
+  const helmet = part(teamDark, new THREE.SphereGeometry(0.163, 22, 16), 0, 1.635, 0, 0, 1, 0.78);
+  const brim = part(teamDark, new THREE.CylinderGeometry(0.168, 0.168, 0.022, 24), 0, 1.615, 0);
   const armPivot = new THREE.Group();
   armPivot.position.set(0.18, 1.34, 0);
-  const arm = limb(teamMat, 0.11, 0.11, 0.52, 0, -0.02, -0.2);
+  const arm = part(teamMat, new THREE.CapsuleGeometry(0.055, 0.41, 4, 14).rotateX(Math.PI / 2), 0, -0.02, -0.2);
   armPivot.add(arm);
   const gunMount = new THREE.Group();
-  gunMount.position.set(0.1, 1.32, -0.18);
+  gunMount.position.set(-0.08, -0.02, -0.24); // at the arm's end, in the hands
   armPivot.add(gunMount);
-  const armL = limb(teamMat, 0.11, 0.42, 0.11, -0.29, 1.12, -0.12);
-  armL.rotation.x = -0.7;
-  g.add(legL, legR, torso, vest, head, helmet, armPivot, armL);
+  const armL = part(teamMat, new THREE.CapsuleGeometry(0.055, 0.31, 4, 14), -0.29, 1.12, -0.12, -0.7);
+  g.add(legL, legR, torso, vest, shoulderL, shoulderR, head, visor, helmet, brim, armPivot, armL);
   g.userData = { legL, legR, torso, vest, head, helmet, armPivot, gunMount, teamMat };
   actor.model = g;
   return g;

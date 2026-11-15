@@ -731,8 +731,9 @@ function stageShot(n) {
     hud.showBuy();
     buyOpen = true;
   } else {
-    // Down A-long toward the furnace door, unscoped: two Wardens holding it, an ally
-    // pushing the flank — the map read at a glance.
+    // Down A-long toward the furnace door, unscoped: a Warden steps out close in front of
+    // the player (near enough that the rounded kit reads), a second holds the door, an
+    // ally pushes the flank — the map read at a glance.
     place(player, -27.5, 1.5, -19, -5);
     player.pitch = -0.03;
     player.loadout.primary = { id: 'harrier', mag: 25, reserve: 90 };
@@ -740,8 +741,8 @@ function stageShot(n) {
     player.money = 3400;
     place(ally, -23.8, -3.4, -19, -5);
     setModelGun(ally, 'harrier');
-    place(vex, -19.5, -4.6, player.pos.x, player.pos.z);
-    setModelGun(vex, 'harrier');
+    place(vex, -25.2, -0.3, player.pos.x, player.pos.z);
+    setModelGun(vex, 'jackdaw');
     place(onyx, -16.8, -11.5, -19, -6);
     match.scores = [2, 1];
     match.round = 4;

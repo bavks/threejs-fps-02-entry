@@ -112,9 +112,10 @@ export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloom
 }
 
 // --- Gun models -------------------------------------------------------------
-// First-person viewmodels and the simpler third-person guns bots carry are both boxes with
-// intent: receiver, barrel, magazine, stock, a sight. One material set, shared geometry is
-// created per gun (nine guns, nine bots — cheap enough, and each reads differently).
+// First-person viewmodels and the third-person guns bots carry are rounded builds on the
+// same anchors as the boxy originals: capsule receivers and stocks, tube barrels, ring
+// optics. Every centre and overall length matches the old model, so muzzle points, mounts
+// and the ADS picture stay where they were — only the shapes changed.
 const gunMats = {
   body: new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.45, metalness: 0.7 }),
   grip: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 }),
@@ -122,78 +123,101 @@ const gunMats = {
   barrel: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.35, metalness: 0.8 }),
 };
 
-function part(group, mat, x, y, z, w, h, d, rx = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+// put(): one rounded part; sx/sy squash its cross-section to the old box's proportions.
+function put(g, geo, mat, x, y, z, rx = 0, sx = 1, sy = 1) {
+  const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
   m.rotation.x = rx;
-  group.add(m);
+  m.scale.set(sx, sy, 1);
+  g.add(m);
   return m;
 }
+const tube = (r, l) => new THREE.CylinderGeometry(r, r, l, 20).rotateX(Math.PI / 2); // barrel along z
+const rod = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16).rotateX(Math.PI / 2); // capsule along z, total length l
+const drop = (r, l) => new THREE.CapsuleGeometry(r, Math.max(0.01, l - 2 * r), 4, 16); // capsule along y, total height l
+const pin = (r, l) => new THREE.CylinderGeometry(r, r, l, 12); // short post along y
+const ring = (r, t) => new THREE.TorusGeometry(r, t, 10, 28); // optic rim, facing the shooter
+const ball = (r) => new THREE.SphereGeometry(r, 16, 12);
 
 export function buildGunModel(id) {
   const g = new THREE.Group();
+  const B = gunMats.body, K = gunMats.barrel, W = gunMats.grip, A = gunMats.accent;
   if (id === 'wren') {
-    part(g, gunMats.body, 0, 0, 0, 0.045, 0.07, 0.21);
-    part(g, gunMats.barrel, 0, 0.028, -0.13, 0.03, 0.03, 0.07);
-    part(g, gunMats.grip, 0, -0.075, 0.055, 0.04, 0.1, 0.05, 0.25);
-    part(g, gunMats.accent, 0, 0.045, -0.05, 0.012, 0.02, 0.012);
+    put(g, rod(0.035, 0.21), B, 0, 0, 0, 0, 0.64); // rounded slide
+    put(g, tube(0.015, 0.07), K, 0, 0.028, -0.13); // muzzle
+    put(g, drop(0.025, 0.1), W, 0, -0.075, 0.055, 0.25, 0.8); // grip
+    put(g, ball(0.009), A, 0, 0.045, -0.05); // front bead
   } else if (id === 'magpie') {
-    part(g, gunMats.body, 0, 0.01, -0.02, 0.05, 0.06, 0.3); // frame and top strap
-    part(g, gunMats.barrel, 0, 0.02, -0.24, 0.032, 0.032, 0.16); // heavy barrel
-    part(g, gunMats.body, 0, -0.03, 0.0, 0.058, 0.055, 0.075); // cylinder
-    part(g, gunMats.grip, 0, -0.085, 0.06, 0.042, 0.105, 0.052, 0.3);
-    part(g, gunMats.accent, 0, 0.048, -0.13, 0.012, 0.02, 0.012); // front blade
+    put(g, rod(0.03, 0.3), B, 0, 0.01, -0.02, 0, 0.83); // frame and top strap
+    put(g, tube(0.016, 0.16), K, 0, 0.02, -0.24); // heavy barrel
+    put(g, tube(0.011, 0.14), K, 0, -0.004, -0.235); // underlug
+    put(g, tube(0.0295, 0.075), B, 0, -0.03, 0); // the drum, round at last
+    put(g, drop(0.026, 0.105), W, 0, -0.085, 0.06, 0.3, 0.8); // grip
+    put(g, ball(0.009), A, 0, 0.048, -0.13); // front blade
   } else if (id === 'boar') {
-    part(g, gunMats.body, 0, 0, -0.05, 0.06, 0.08, 0.4);
-    part(g, gunMats.barrel, 0, 0.015, -0.38, 0.035, 0.035, 0.34);
-    part(g, gunMats.grip, 0, -0.01, -0.22, 0.05, 0.05, 0.14); // pump
-    part(g, gunMats.grip, 0, -0.02, 0.24, 0.055, 0.09, 0.18); // stock
+    put(g, rod(0.04, 0.4), B, 0, 0, -0.05, 0, 0.75); // receiver
+    put(g, tube(0.0175, 0.34), K, 0, 0.015, -0.38); // barrel
+    put(g, tube(0.013, 0.3), K, 0, -0.024, -0.36); // magazine tube under it
+    put(g, tube(0.027, 0.14), W, 0, 0.012, -0.22); // pump sleeve
+    put(g, rod(0.045, 0.18), W, 0, -0.02, 0.24, 0, 0.61); // stock
   } else if (id === 'krait') {
-    part(g, gunMats.body, 0, 0, -0.02, 0.055, 0.09, 0.34);
-    part(g, gunMats.barrel, 0, 0.01, -0.26, 0.03, 0.03, 0.16);
-    part(g, gunMats.body, 0, -0.09, -0.02, 0.035, 0.13, 0.05); // long mag
-    part(g, gunMats.grip, 0, -0.07, 0.1, 0.04, 0.09, 0.045, 0.25);
-    part(g, gunMats.accent, 0, 0.06, -0.1, 0.02, 0.025, 0.1); // top rail stripe
+    put(g, rod(0.045, 0.34), B, 0, 0, -0.02, 0, 0.61); // receiver
+    put(g, tube(0.015, 0.16), K, 0, 0.01, -0.26); // barrel
+    put(g, tube(0.021, 0.05), K, 0, 0.01, -0.325); // muzzle cage
+    put(g, drop(0.025, 0.13), B, 0, -0.09, -0.02, 0, 0.7); // long mag
+    put(g, drop(0.024, 0.09), W, 0, -0.07, 0.1, 0.25, 0.83); // grip
+    put(g, rod(0.0125, 0.1), A, 0, 0.058, -0.1, 0, 0.8); // top rail stripe
   } else if (id === 'jackdaw') {
-    part(g, gunMats.body, 0, 0, -0.03, 0.056, 0.085, 0.44);
-    part(g, gunMats.grip, 0, 0.005, -0.3, 0.052, 0.06, 0.2); // long handguard
-    part(g, gunMats.barrel, 0, 0.012, -0.42, 0.026, 0.026, 0.1);
-    part(g, gunMats.body, 0, 0.068, -0.02, 0.03, 0.028, 0.3); // carry handle
-    part(g, gunMats.body, 0, -0.095, -0.01, 0.036, 0.13, 0.055); // straight mag
-    part(g, gunMats.grip, 0, -0.07, 0.11, 0.04, 0.09, 0.045, 0.25);
-    part(g, gunMats.body, 0, -0.01, 0.26, 0.05, 0.07, 0.13); // stock
+    put(g, rod(0.0425, 0.44), B, 0, 0, -0.03, 0, 0.66); // receiver
+    put(g, tube(0.03, 0.2), W, 0, 0.005, -0.3); // round handguard
+    put(g, tube(0.013, 0.1), K, 0, 0.012, -0.42); // barrel
+    put(g, rod(0.014, 0.3), B, 0, 0.068, -0.02); // carry handle
+    put(g, drop(0.027, 0.13), B, 0, -0.095, -0.01, 0, 0.67); // straight mag
+    put(g, drop(0.024, 0.09), W, 0, -0.07, 0.11, 0.25, 0.83); // grip
+    put(g, rod(0.035, 0.13), B, 0, -0.01, 0.26, 0, 0.71); // stock
   } else if (id === 'heron') {
-    part(g, gunMats.body, 0, 0, -0.06, 0.05, 0.07, 0.52);
-    part(g, gunMats.barrel, 0, 0.012, -0.5, 0.024, 0.024, 0.4);
-    part(g, gunMats.body, 0, 0.072, -0.1, 0.042, 0.046, 0.2); // scope tube
-    part(g, gunMats.body, 0, -0.085, -0.06, 0.034, 0.11, 0.05); // slim mag
-    part(g, gunMats.grip, 0, -0.07, 0.1, 0.04, 0.09, 0.045, 0.25);
-    part(g, gunMats.grip, 0, -0.01, 0.3, 0.054, 0.075, 0.2); // stock
-    part(g, gunMats.barrel, 0, -0.055, -0.44, 0.012, 0.07, 0.012); // bipod nub
+    put(g, rod(0.035, 0.52), B, 0, 0, -0.06, 0, 0.71); // receiver
+    put(g, tube(0.012, 0.4), K, 0, 0.012, -0.5); // barrel
+    put(g, tube(0.023, 0.2), B, 0, 0.072, -0.1); // scope tube
+    put(g, tube(0.029, 0.035), K, 0, 0.072, -0.19); // objective bell
+    put(g, tube(0.026, 0.03), K, 0, 0.072, -0.015); // ocular bell
+    put(g, ring(0.024, 0.0035), K, 0, 0.072, -0.205); // lens rim
+    put(g, drop(0.025, 0.11), B, 0, -0.085, -0.06, 0, 0.68); // slim mag
+    put(g, drop(0.024, 0.09), W, 0, -0.07, 0.1, 0.25, 0.83); // grip
+    put(g, rod(0.0375, 0.2), W, 0, -0.01, 0.3, 0, 0.72); // stock
+    put(g, pin(0.006, 0.07), K, 0, -0.055, -0.44); // bipod nub
   } else if (id === 'oxen') {
-    part(g, gunMats.body, 0, 0, -0.04, 0.075, 0.1, 0.46); // fat receiver
-    part(g, gunMats.barrel, 0, 0.015, -0.42, 0.034, 0.034, 0.32); // shrouded barrel
-    part(g, gunMats.body, 0, -0.115, -0.05, 0.09, 0.11, 0.16); // belt box
-    part(g, gunMats.body, 0, 0.075, -0.02, 0.026, 0.03, 0.3); // carry handle
-    part(g, gunMats.grip, 0, -0.07, 0.13, 0.042, 0.095, 0.046, 0.25);
-    part(g, gunMats.body, 0, -0.01, 0.27, 0.056, 0.075, 0.15); // stock
-    part(g, gunMats.accent, 0, 0.045, -0.56, 0.014, 0.028, 0.014); // front post
+    put(g, rod(0.05, 0.46), B, 0, 0, -0.04, 0, 0.75); // fat receiver
+    put(g, tube(0.017, 0.32), K, 0, 0.015, -0.42); // barrel
+    put(g, tube(0.027, 0.18), K, 0, 0.015, -0.36); // perforated shroud
+    put(g, rod(0.055, 0.16), B, 0, -0.115, -0.05, 0, 0.82); // belt box, rounded
+    put(g, rod(0.015, 0.3), B, 0, 0.075, -0.02); // carry handle
+    put(g, drop(0.025, 0.095), W, 0, -0.07, 0.13, 0.25, 0.84); // grip
+    put(g, rod(0.0375, 0.15), B, 0, -0.01, 0.27, 0, 0.75); // stock
+    put(g, ball(0.01), A, 0, 0.048, -0.56); // front post
   } else if (id === 'lance') {
-    part(g, gunMats.body, 0, 0, -0.05, 0.05, 0.07, 0.5);
-    part(g, gunMats.barrel, 0, 0.01, -0.48, 0.025, 0.025, 0.44);
-    part(g, gunMats.body, 0, 0.078, -0.08, 0.046, 0.052, 0.24); // long scope tube
-    part(g, gunMats.barrel, 0, 0.078, -0.21, 0.056, 0.06, 0.03); // objective bell
-    part(g, gunMats.grip, 0, -0.02, 0.3, 0.055, 0.08, 0.22); // stock
-    part(g, gunMats.body, 0, -0.08, -0.05, 0.035, 0.1, 0.05); // mag
+    put(g, rod(0.035, 0.5), B, 0, 0, -0.05, 0, 0.71); // receiver
+    put(g, tube(0.0125, 0.44), K, 0, 0.01, -0.48); // barrel
+    put(g, tube(0.018, 0.06), K, 0, 0.01, -0.67); // muzzle brake
+    put(g, tube(0.026, 0.24), B, 0, 0.078, -0.08); // scope tube
+    put(g, tube(0.031, 0.035), K, 0, 0.078, -0.21); // objective bell
+    put(g, tube(0.028, 0.03), K, 0, 0.078, 0.025); // ocular bell
+    put(g, ring(0.027, 0.004), K, 0, 0.078, -0.226); // lens rim
+    put(g, ball(0.011), K, 0.042, 0, 0.05); // bolt knob
+    put(g, rod(0.04, 0.22), W, 0, -0.02, 0.3, 0, 0.69); // stock
+    put(g, drop(0.025, 0.1), B, 0, -0.08, -0.05, 0, 0.7); // mag
   } else {
     // harrier, wearing its red-dot sight
-    part(g, gunMats.body, 0, 0, -0.03, 0.055, 0.085, 0.42);
-    part(g, gunMats.barrel, 0, 0.012, -0.33, 0.028, 0.028, 0.2);
-    part(g, gunMats.body, 0, -0.095, 0.0, 0.035, 0.14, 0.055, -0.12); // curved mag
-    part(g, gunMats.grip, 0, -0.07, 0.12, 0.04, 0.09, 0.045, 0.25);
-    part(g, gunMats.body, 0, -0.01, 0.27, 0.05, 0.07, 0.14); // stock
-    part(g, gunMats.body, 0, 0.068, -0.04, 0.036, 0.045, 0.07); // reflex housing
-    part(g, gunMats.accent, 0, 0.072, -0.045, 0.008, 0.014, 0.008); // the dot
+    put(g, rod(0.0425, 0.42), B, 0, 0, -0.03, 0, 0.65); // receiver
+    put(g, tube(0.027, 0.15), W, 0, 0.008, -0.27); // round handguard
+    put(g, tube(0.014, 0.2), K, 0, 0.012, -0.33); // barrel
+    put(g, tube(0.017, 0.05), K, 0, 0.012, -0.415); // muzzle tip
+    put(g, drop(0.0275, 0.14), B, 0, -0.095, 0, -0.12, 0.64); // curved mag
+    put(g, drop(0.024, 0.09), W, 0, -0.07, 0.12, 0.25, 0.83); // grip
+    put(g, rod(0.035, 0.14), B, 0, -0.01, 0.27, 0, 0.71); // stock
+    put(g, pin(0.005, 0.028), B, 0, 0.052, -0.04); // reflex post
+    put(g, ring(0.02, 0.005), B, 0, 0.072, -0.04); // reflex window
+    put(g, ball(0.005), A, 0, 0.072, -0.04); // the dot
   }
   return g;
 }

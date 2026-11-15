@@ -204,9 +204,9 @@ export function createMap(scene, random) {
   }
 
   // Light: low warm sun with shadows, cool sky fill, and three working lights.
-  const hemi = new THREE.HemisphereLight(0x93a7ba, 0x4a4038, 0.75);
+  const hemi = new THREE.HemisphereLight(0xbcd3e6, 0x5a5040, 1.1);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.0);
+  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.7);
   sun.position.set(34, 42, -20);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -218,6 +218,10 @@ export function createMap(scene, random) {
   sun.shadow.camera.far = 130;
   sun.shadow.bias = -0.0006;
   scene.add(sun);
+  // A shadowless fill from the opposite quarter keeps unlit faces readable.
+  const fill = new THREE.DirectionalLight(0xdfeaf5, 0.5);
+  fill.position.set(-30, 24, 26);
+  scene.add(fill);
   const hallLight = new THREE.PointLight(0xff9a3c, 60, 20, 1.8);
   hallLight.position.set(-20, 3.2, -14);
   scene.add(hallLight);

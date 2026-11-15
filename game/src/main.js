@@ -32,7 +32,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+renderer.toneMappingExposure = 1.22;
 document.getElementById('game').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -639,7 +639,7 @@ function stageShot(n) {
     player.loadout.primary = { id: 'harrier', mag: 25, reserve: 90 };
     player.loadout.current = 'primary';
     player.money = 3400;
-    place(ally, -25.2, 3.4, -19, -5);
+    place(ally, -23.8, -3.4, -19, -5);
     setModelGun(ally, 'harrier');
     place(vex, -19.5, -4.6, player.pos.x, player.pos.z);
     setModelGun(vex, 'harrier');
@@ -648,40 +648,43 @@ function stageShot(n) {
     match.round = 4;
     match.roundTime = 72;
   } else if (n === 2) {
-    // A firefight in the rail yard: one Warden down, one returning fire, an ally pushing.
-    place(player, 13, 8.6, 21, 15);
-    player.pitch = -0.02;
+    // A firefight in the rail yard, shot from the south-east corner: one Warden down on the
+    // site ring, one returning fire across the site, an ally beside the player shooting the
+    // same line, a fourth Warden holding the north side.
+    place(player, 27.5, 8.5, 19, 17);
+    player.pitch = -0.03;
     player.loadout.primary = { id: 'harrier', mag: 17, reserve: 90 };
     player.loadout.current = 'primary';
     player.health = 68;
     player.money = 2900;
-    place(ally, 15.6, 12.6, 24, 20);
+    place(ally, 25.2, 12.2, 17, 18.5);
     setModelGun(ally, 'krait');
     const down = vex;
-    place(down, 20.6, 14.2);
+    place(down, 21.5, 15.8);
     down.alive = false;
     down.health = 0;
     down.deathT = 0.55;
-    place(onyx, 26.5, 11.8, player.pos.x, player.pos.z);
+    place(onyx, 16.5, 19.5, player.pos.x, player.pos.z);
     setModelGun(onyx, 'harrier');
-    place(rurik, 24.5, 21.5, player.pos.x, player.pos.z);
+    place(rurik, 24.8, 20.8, player.pos.x, player.pos.z);
     match.scores = [3, 2];
     match.round = 5;
     match.roundTime = 54;
     hud.addKill('<span class="k0">You</span> ▸ Harrier AR <span class="hs">HEADSHOT</span> ▸ <span class="k1">Vex</span>');
     hud.addKill('<span class="k0">Onyx</span> ▸ Krait SMG ▸ <span class="k1">Rurik</span>');
     hud.hitmarker(false);
-    // Live fire, frozen at the flash: player and Onyx trade rounds, the ally sprays the yard.
+    // Live fire, frozen at the flash: the player finishes Vex, Onyx answers across the
+    // site, the ally fires on the same line.
     const m1 = muzzlePos(player, new THREE.Vector3());
-    effects.tracer(m1.x, m1.y, m1.z, 20.9, 1.25, 14.3);
+    effects.tracer(m1.x, m1.y, m1.z, 21.8, 1.1, 16.1);
     effects.muzzle(m1.x, m1.y, m1.z, false);
-    effects.impact(20.9, 1.25, 14.3, 'spark');
+    effects.impact(21.8, 1.1, 16.1, 'spark');
     const m2 = muzzlePos(onyx, new THREE.Vector3());
-    effects.tracer(m2.x, m2.y, m2.z, 14.2, 1.35, 9.4);
+    effects.tracer(m2.x, m2.y, m2.z, 26.2, 1.3, 9.3);
     effects.muzzle(m2.x, m2.y, m2.z, false);
     const m3 = muzzlePos(ally, new THREE.Vector3());
-    effects.tracer(m3.x, m3.y, m3.z, 23.8, 1.1, 19.8);
-    effects.impact(23.8, 1.1, 19.8, 'dust');
+    effects.tracer(m3.x, m3.y, m3.z, 17.2, 1.2, 19.0);
+    effects.impact(17.2, 1.2, 19.0, 'dust');
     void sable;
   } else if (n === 3) {
     // The buy menu over spawn, freeze time: a rifle and a vest already owned.
@@ -706,7 +709,7 @@ function stageShot(n) {
     player.health = 84;
     player.money = 2100;
     const defuser = vex;
-    place(defuser, -18.5, -12.8, -19.3, -13.3);
+    place(defuser, -18.0, -12.2, -18.9, -13.6);
     defuser.crouch = true;
     defuser.height = 1.34;
     place(onyx, -16, -18.5, -17, -9);
@@ -716,14 +719,15 @@ function stageShot(n) {
     setModelGun(jackal, 'harrier');
     match.bombPlanted = true;
     match.bombSite = 'A';
-    match.bombPos.x = -19.3;
-    match.bombPos.z = -13.3;
+    match.bombPos.x = -18.9;
+    match.bombPos.z = -13.6;
     match.bombTimer = 23;
     match.scores = [5, 4];
     match.round = 10;
-    bombProp.show(-19.3, -13.3);
+    match.channel = { kind: 'defuse', actor: defuser, progress: 3.1, need: 5 };
+    bombProp.show(-18.9, -13.6);
+    bombProp.blink(0.35, true);
     hud.setBomb('A');
-    hud.channel(0.62, 'DEFUSING — Vex');
   }
 
   showViewmodel(currentGun(player.loadout).held.id);

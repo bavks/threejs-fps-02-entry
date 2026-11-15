@@ -23,6 +23,7 @@ export function createActor(team, name, isPlayer) {
     money: 800, kills: 0, deaths: 0,
     // combat state
     nextShot: 0, reloadUntil: 0, bloom: 0, scoped: false, triggerHeld: false,
+    burstLeft: 0, zoomIdx: 0,
     semiLatch: false, lastShotAt: -9, flashBlindUntil: 0, suppressedUntil: 0,
     // presentation
     model: null, walkPhase: 0, deathT: 0, flashT: 0, muzzleT: 0,

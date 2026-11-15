@@ -109,11 +109,24 @@
   #damage-flash { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 42%, rgba(190,30,20,.5) 100%); opacity: 0; transition: opacity .1s; }
   #damage-flash.on { opacity: 1; }
   #blind-flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
-  #scope { position: fixed; inset: 0; opacity: 0; transition: opacity .12s; background: radial-gradient(circle at center, transparent 29%, rgba(0,0,0,.97) 42%); }
+  /* The optics. A closed scope is a circular lens: the world outside it is black, and
+     inside it a fine crosshair with mil-dots on both axes and the dialled zoom in the
+     corner. The reflex sight (.dot) is an open window instead — a framed pane with a
+     dimmed surround and one bright dot, so the periphery stays readable. */
+  #scope { position: fixed; inset: 0; opacity: 0; transition: opacity .12s; }
   #scope.show { opacity: 1; }
-  #scope::before, #scope::after { content: ''; position: absolute; background: rgba(0,0,0,.85); }
-  #scope::before { left: 50%; top: 8%; bottom: 8%; width: 1.5px; }
-  #scope::after { top: 50%; left: 14%; right: 14%; height: 1.5px; }
+  #scope .lens { position: absolute; left: 50%; top: 50%; width: 76vmin; height: 76vmin; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; border: 3px solid rgba(0,0,0,.92); box-shadow: 0 0 0 120vmax rgba(2,3,4,.985), inset 0 0 7vmin rgba(0,0,0,.5); }
+  #scope .lens i { position: absolute; display: block; }
+  #scope .ret-h { left: 0; right: 0; top: 50%; height: 1.5px; margin-top: -1px; background: rgba(8,8,8,.85); }
+  #scope .ret-v { top: 0; bottom: 0; left: 50%; width: 1.5px; margin-left: -1px; background: rgba(8,8,8,.85); }
+  #scope .mil-h { left: 9%; right: 9%; top: 50%; height: 9px; transform: translateY(-50%); background-image: radial-gradient(circle, rgba(8,8,8,.9) 1.7px, transparent 2.2px); background-size: 10% 100%; background-repeat: repeat-x; background-position: center; }
+  #scope .mil-v { top: 9%; bottom: 9%; left: 50%; width: 9px; transform: translateX(-50%); background-image: radial-gradient(circle, rgba(8,8,8,.9) 1.7px, transparent 2.2px); background-size: 100% 10%; background-repeat: repeat-y; background-position: center; }
+  #scope .ret-c { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: rgba(150,22,12,.8); }
+  #scope-zoom { position: absolute; right: 13%; bottom: 14%; font-family: var(--font-readout); font-size: 15px; letter-spacing: .08em; color: rgba(10,10,10,.72); }
+  #scope.dot .lens { width: 48vmin; height: 48vmin; border-radius: 16px; border: 11px solid rgba(8,9,10,.94); box-shadow: 0 0 0 120vmax rgba(2,3,4,.52), inset 0 0 3vmin rgba(0,0,0,.35); }
+  #scope.dot .ret-h, #scope.dot .ret-v, #scope.dot .mil-h, #scope.dot .mil-v { display: none; }
+  #scope.dot .ret-c { width: 8px; height: 8px; margin: -4px 0 0 -4px; background: #ff2d16; box-shadow: 0 0 9px 2px rgba(255,45,22,.75); }
+  #scope.dot #scope-zoom { color: rgba(236,231,219,.85); right: 4%; bottom: 3%; }
 
   /* Overlays: menu, buy, pause, match over, scoreboard. */
   .overlay { position: fixed; inset: 0; display: none; place-items: center; padding: 22px; background: rgba(13,15,18,.78); backdrop-filter: blur(3px); z-index: 5; }
@@ -167,7 +180,7 @@
 <div id="game"></div>
 
 <div id="hud" aria-hidden="true">
-  <div id="scope"></div>
+  <div id="scope"><div class="lens"><i class="ret-h"></i><i class="ret-v"></i><i class="mil-h"></i><i class="mil-v"></i><b class="ret-c"></b><span id="scope-zoom"></span></div></div>
   <div id="damage-flash"></div>
   <div id="blind-flash"></div>
   <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
@@ -218,7 +231,7 @@
       <li><kbd>G</kbd> Frag · <kbd>F</kbd> Flash</li>
       <li><kbd>E</kbd> Plant / defuse (hold)</li>
       <li><kbd>B</kbd> Buy menu · <kbd>Tab</kbd> Scoreboard</li>
-      <li><kbd>RMB</kbd> Scope (Lance SR)</li>
+      <li><kbd>RMB</kbd> Aim sight / scope · <kbd>X</kbd> Zoom level</li>
     </ul>
     <p>Stopping to shoot is how you hit: spread blooms on the move and under fire. Headshots
        pay four times over. Watch your money — a lost round still pays, a won one pays more.</p>

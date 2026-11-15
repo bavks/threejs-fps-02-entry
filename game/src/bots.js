@@ -283,17 +283,23 @@ function engage(brain, world, now, dt) {
   intent.crouch = brain.strafeT < 0.25 && dist < 20;
 }
 
-// What a bot buys at the freeze, by its purse. Rifles first, then armour, then grenades;
-// a broke bot saves or forces a cheap gun, like a player would.
+// What a bot buys at the freeze, by its purse. The priciest primary it can afford, with a
+// lean toward the runner-up now and then so the field is not nine copies of one gun; a
+// Magpie when the purse stays fat; then armour, then grenades, like a player would.
 export function botBuy(actor, random) {
   const lo = actor.loadout;
   if (!lo.primary) {
-    if (actor.money >= 2700) { actor.money -= 2700; lo.primary = freshGun('harrier'); }
-    else if (actor.money >= 1250) {
-      const id = random() < 0.6 ? 'krait' : 'boar';
+    const menu = ['lance', 'oxen', 'heron', 'harrier', 'jackdaw', 'krait', 'boar'];
+    const afford = menu.filter((id) => actor.money >= WEAPONS[id].price);
+    if (afford.length) {
+      const id = afford[random() < 0.72 || afford.length === 1 ? 0 : 1];
       actor.money -= WEAPONS[id].price;
       lo.primary = freshGun(id);
     }
+  }
+  if (lo.sidearm.id === 'wren' && actor.money >= 1500 && random() < 0.35) {
+    actor.money -= WEAPONS.magpie.price;
+    lo.sidearm = freshGun('magpie');
   }
   if (lo.armor < 2 && actor.money >= (lo.armor === 1 ? 350 : 1000) && actor.money > 1600) {
     actor.money -= lo.armor === 1 ? 350 : 1000;

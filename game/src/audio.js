@@ -88,9 +88,13 @@ export function createAudio() {
     const own = x === undefined;
     const P = {
       wren: [2600, 500, 0.16, 300],
+      magpie: [2100, 420, 0.26, 210],
       boar: [1500, 320, 0.3, 190],
       krait: [3000, 620, 0.1, 330],
+      jackdaw: [2850, 560, 0.13, 310],
       harrier: [2700, 540, 0.15, 300],
+      heron: [3100, 640, 0.28, 200],
+      oxen: [1900, 380, 0.18, 160],
       lance: [3400, 700, 0.42, 150],
     }[kind] || [2700, 540, 0.15, 300];
     const t = ctx.currentTime;

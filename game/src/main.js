@@ -14,7 +14,7 @@ import { createBotAI, stepBot, botBuy } from './bots.js';
 import { createMatch } from './rounds.js';
 import { createInput } from './input.js';
 import { createPlayerController } from './player.js';
-import { WEAPONS, currentGun, damageAt, spreadRadians, buildGunModel } from './weapons.js';
+import { WEAPONS, currentGun, currentZoom, damageAt, spreadRadians, buildGunModel } from './weapons.js';
 import { createEffects, createBombProp } from './effects.js';
 import { glowTexture } from './textures.js';
 import { createAudio } from './audio.js';
@@ -187,7 +187,13 @@ function tryFire(actor, now) {
     else return;
   }
   if (now < actor.nextShot) return;
-  if (!def.auto && actor.semiLatch) return;
+  if (def.burst) {
+    // A burst gun fires its burst on one press, then latches until the trigger lifts.
+    if (actor.burstLeft <= 0) {
+      if (actor.semiLatch) return;
+      actor.burstLeft = def.burst;
+    }
+  } else if (!def.auto && actor.semiLatch) return;
   if (held.mag <= 0) {
     startReload(actor, now);
     if (actor.isPlayer) audio.dryFire();
@@ -196,12 +202,16 @@ function tryFire(actor, now) {
   }
   held.mag -= 1;
   actor.semiLatch = true;
+  if (def.burst) {
+    actor.burstLeft -= 1;
+    if (actor.burstLeft > 0) actor.semiLatch = false; // the burst feeds itself; the latch waits for its last round
+  }
   actor.nextShot = now + 60 / def.rpm;
   actor.lastShotAt = now;
   actor.bloom = Math.min(2.2, actor.bloom + def.bloom);
   for (let p = 0; p < def.pellets; p++) fireOne(actor, def, now);
   muzzlePos(actor, tmpOrigin);
-  effects.muzzle(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, def.pellets > 1 || def.damage > 60);
+  effects.muzzle(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, def.pellets > 1 || def.damage > 60 || def.heavy);
   audio.shot(held.id, actor.isPlayer ? undefined : actor.pos.x, actor.isPlayer ? undefined : actor.pos.z);
   world.noise.push({ x: actor.pos.x, z: actor.pos.z, t: now, team: actor.team });
   if (actor.isPlayer) {
@@ -336,7 +346,7 @@ function stepPlayer(dt) {
   controller.step(dt, input, map.colliders, canMove);
   player.intent.fire = input.state.firing && input.state.locked && !buyOpen;
   player.intent.channel = input.state.keys.has('KeyE');
-  player.scoped = input.state.aiming && currentGun(player.loadout).def.zoom > 1 && player.alive;
+  player.scoped = input.state.aiming && !!currentGun(player.loadout).def.zooms && player.alive;
   if (!player.intent.fire) player.semiLatch = false;
   if (player.intent.fire) tryFire(player, simNow);
 }
@@ -479,29 +489,40 @@ function toggleBuy(force) {
 function handleKeys() {
   if (input.wasPressed('KeyB')) toggleBuy();
   if (buyOpen) {
-    for (const { item, key } of BUY_ITEMS) {
-      if (input.wasPressed('Digit' + key)) hud.onBuy(item);
+    for (const { item, code } of BUY_ITEMS) {
+      if (input.wasPressed(code)) hud.onBuy(item);
     }
     if (input.wasPressed('Escape')) toggleBuy(false);
     return;
   }
   if (!playing) return;
   if (input.wasPressed('KeyR')) startReload(player, simNow);
+  // Zoom toggle: X any time the held gun carries two levels, the wheel while aiming.
+  const heldDef = currentGun(player.loadout).def;
+  if (heldDef.zooms && heldDef.zooms.length > 1 &&
+      (input.wasPressed('KeyX') || (input.state.wheel !== 0 && player.scoped))) {
+    player.zoomIdx = ((player.zoomIdx || 0) + 1) % heldDef.zooms.length;
+    input.state.wheel = 0;
+    audio.draw();
+  }
   if (input.wasPressed('Digit1') && player.loadout.primary) {
     player.loadout.current = 'primary';
     player.scoped = false;
+    player.zoomIdx = 0;
     showViewmodel(player.loadout.primary.id);
     audio.draw();
   }
   if (input.wasPressed('Digit2')) {
     player.loadout.current = 'sidearm';
     player.scoped = false;
-    showViewmodel('wren');
+    player.zoomIdx = 0;
+    showViewmodel(player.loadout.sidearm.id);
     audio.draw();
   }
   if (input.state.wheel !== 0) {
     const toPrimary = player.loadout.current === 'sidearm' && player.loadout.primary;
     player.loadout.current = toPrimary ? 'primary' : 'sidearm';
+    player.zoomIdx = 0;
     showViewmodel(currentGun(player.loadout).held.id);
     input.state.wheel = 0;
   }
@@ -549,7 +570,8 @@ function syncHud() {
     const remain = player.flashBlindUntil - simNow;
     hud.setBlind(Math.min(1, remain / Math.max(0.4, (player.blindTotal || remain) * 0.55)));
   } else hud.setBlind(0);
-  hud.setScope(player.scoped && player.alive);
+  const ads = player.scoped && player.alive;
+  hud.setScope(ads, def.optic, ads && def.zooms ? `${currentZoom(player, def)}×` : '');
 }
 
 // --- Camera and render ---------------------------------------------------------------
@@ -571,7 +593,8 @@ function syncCamera(dt) {
     camera.rotation.z += (random() * 2 - 1) * shake * 0.04;
     shake *= Math.max(0, 1 - dt * 5);
   }
-  const targetFov = player.scoped && player.alive ? 74 / currentGun(player.loadout).def.zoom : 74;
+  const heldDef = currentGun(player.loadout).def;
+  const targetFov = player.scoped && player.alive ? 74 / currentZoom(player, heldDef) : 74;
   if (Math.abs(camera.fov - targetFov) > 0.05) {
     camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 14);
     camera.updateProjectionMatrix();
@@ -582,7 +605,9 @@ function syncCamera(dt) {
   const bobY = Math.sin(controller.bobPhase * 2) * 0.008 * controller.bobAmount;
   viewmodel.position.set(0.235, -0.225 + bobY - vmReloadDip * 0.05, -0.48 + vmKick);
   viewmodel.rotation.x = vmKick * 1.4 - vmReloadDip * 0.5;
-  viewmodel.visible = player.alive;
+  // Through a closed scope the gun is at the shoulder, out of the lens; a reflex sight
+  // is shot both-eyes-open, so its viewmodel stays.
+  viewmodel.visible = player.alive && !(player.scoped && heldDef.optic === 'scope');
 }
 
 let accumulator = 0;
@@ -594,7 +619,11 @@ function frame(nowMs) {
   handleKeys();
   if (playing) {
     const look = input.takeLook();
-    if (input.state.locked && player.alive) controller.look(look.x, look.y);
+    if (input.state.locked && player.alive) {
+      // Aim sensitivity scales down with magnification, so a 5x scope is steerable.
+      const scale = player.scoped ? 1 / currentZoom(player, currentGun(player.loadout).def) : 1;
+      controller.look(look.x, look.y, scale);
+    }
     accumulator += dt;
     let steps = 0;
     while (accumulator >= FIXED_STEP && steps < 5) {
@@ -633,15 +662,16 @@ function stageShot(n) {
   const ally = actors[1];
 
   if (n === 1) {
-    // Down A-long toward the furnace door: two Wardens holding it, an ally on the flank.
-    place(player, -27.5, 1.5, -19, -5);
-    player.pitch = -0.03;
-    player.loadout.primary = { id: 'harrier', mag: 25, reserve: 90 };
+    // Through the Lance at 5x, down A-long: a Warden holds the furnace door in the
+    // reticle, the world outside the lens gone black.
+    place(player, -27.5, 1.5, -18.6, -4.9);
+    player.pitch = -0.02;
+    player.loadout.primary = { id: 'lance', mag: 4, reserve: 25 };
     player.loadout.current = 'primary';
+    player.scoped = true;
+    player.zoomIdx = 1; // the 5x level
     player.money = 3400;
-    place(ally, -23.8, -3.4, -19, -5);
-    setModelGun(ally, 'harrier');
-    place(vex, -19.5, -4.6, player.pos.x, player.pos.z);
+    place(vex, -18.6, -4.9, player.pos.x, player.pos.z);
     setModelGun(vex, 'harrier');
     place(onyx, -16.8, -11.5, -19, -6);
     match.scores = [2, 1];
@@ -653,12 +683,12 @@ function stageShot(n) {
     // same line, a fourth Warden holding the north side.
     place(player, 27.5, 8.5, 19, 17);
     player.pitch = -0.03;
-    player.loadout.primary = { id: 'harrier', mag: 17, reserve: 90 };
+    player.loadout.primary = { id: 'oxen', mag: 84, reserve: 200 };
     player.loadout.current = 'primary';
     player.health = 68;
     player.money = 2900;
     place(ally, 25.2, 12.2, 17, 18.5);
-    setModelGun(ally, 'krait');
+    setModelGun(ally, 'jackdaw');
     const down = vex;
     place(down, 21.5, 15.8);
     down.alive = false;
@@ -670,8 +700,8 @@ function stageShot(n) {
     match.scores = [3, 2];
     match.round = 5;
     match.roundTime = 54;
-    hud.addKill('<span class="k0">You</span> ▸ Harrier AR <span class="hs">HEADSHOT</span> ▸ <span class="k1">Vex</span>');
-    hud.addKill('<span class="k0">Onyx</span> ▸ Krait SMG ▸ <span class="k1">Rurik</span>');
+    hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> ▸ <span class="k1">Koda</span>');
+    hud.addKill('<span class="k0">Vex</span> ▸ BR-3 Jackdaw ▸ <span class="k1">Talon</span>');
     hud.hitmarker(false);
     // Live fire, frozen at the flash: the player finishes Vex, Onyx answers across the
     // site, the ally fires on the same line.
@@ -701,35 +731,27 @@ function stageShot(n) {
     hud.showBuy();
     buyOpen = true;
   } else {
-    // The charge is down at A: a Warden defuses under cover, the player holds the door.
-    player.team = 1;
-    place(player, -14.8, -9.6, -19, -13.2);
-    player.pitch = -0.04;
-    player.loadout.sidearm.mag = 9;
-    player.health = 84;
-    player.money = 2100;
-    const defuser = vex;
-    place(defuser, -18.0, -12.2, -18.9, -13.6);
-    defuser.crouch = true;
-    defuser.height = 1.34;
-    place(onyx, -16, -18.5, -17, -9);
-    const jackal = ally;
-    jackal.team = 0;
-    place(jackal, -24.5, -10.5, -15, -10);
-    setModelGun(jackal, 'harrier');
-    match.bombPlanted = true;
-    match.bombSite = 'A';
-    match.bombPos.x = -18.9;
-    match.bombPos.z = -13.6;
-    match.bombTimer = 23;
-    match.scores = [5, 4];
-    match.round = 10;
-    match.channel = { kind: 'defuse', actor: defuser, progress: 3.1, need: 5 };
-    bombProp.show(-18.9, -13.6);
-    bombProp.blink(0.35, true);
-    hud.setBomb('A');
+    // Down A-long toward the furnace door, unscoped: two Wardens holding it, an ally
+    // pushing the flank — the map read at a glance.
+    place(player, -27.5, 1.5, -19, -5);
+    player.pitch = -0.03;
+    player.loadout.primary = { id: 'harrier', mag: 25, reserve: 90 };
+    player.loadout.current = 'primary';
+    player.money = 3400;
+    place(ally, -23.8, -3.4, -19, -5);
+    setModelGun(ally, 'harrier');
+    place(vex, -19.5, -4.6, player.pos.x, player.pos.z);
+    setModelGun(vex, 'harrier');
+    place(onyx, -16.8, -11.5, -19, -6);
+    match.scores = [2, 1];
+    match.round = 4;
+    match.roundTime = 72;
   }
 
+  if (player.scoped) {
+    camera.fov = 74 / currentZoom(player, currentGun(player.loadout).def);
+    camera.updateProjectionMatrix();
+  }
   showViewmodel(currentGun(player.loadout).held.id);
   for (const a of actors) if (!a.isPlayer) poseActorModel(a, 0.001);
   syncHud();

@@ -109,14 +109,15 @@ export function createMatch(actors, squads, map, random) {
       if (!match.canBuy(actor)) return 'Buy window closed';
       const lo = actor.loadout;
       const buyGun = (id) => {
-        if (lo.primary && lo.primary.id === id) return 'Already owned';
+        const slot = WEAPONS[id].slot;
+        if (lo[slot] && lo[slot].id === id) return 'Already owned';
         if (actor.money < WEAPONS[id].price) return 'Not enough money';
         actor.money -= WEAPONS[id].price;
-        lo.primary = { id, mag: WEAPONS[id].mag, reserve: WEAPONS[id].reserve };
-        lo.current = 'primary';
+        lo[slot] = { id, mag: WEAPONS[id].mag, reserve: WEAPONS[id].reserve };
+        if (slot === 'primary') lo.current = 'primary';
         return null;
       };
-      if (item === 'boar' || item === 'krait' || item === 'harrier' || item === 'lance') return buyGun(item);
+      if (WEAPONS[item]) return buyGun(item);
       if (item === 'armor1' || item === 'armor2') {
         const tier = item === 'armor1' ? 1 : 2;
         if (lo.armor >= tier) return 'Already owned';

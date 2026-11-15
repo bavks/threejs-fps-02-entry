@@ -2,7 +2,7 @@
 // movement built from the camera yaw. All physics is the shared actor step — this module
 // only translates input into intent, so the player and the bots move by the same rules.
 import { stepLocomotion, eyeHeight } from './actors.js';
-import { currentGun } from './weapons.js';
+import { currentGun, currentZoom } from './weapons.js';
 
 const SENS = 0.0021;
 const PITCH_MAX = 1.45;
@@ -14,10 +14,12 @@ export function createPlayerController(actor) {
     punchYaw: 0,
     bobPhase: 0,
     bobAmount: 0,
+    swayT: 0, // scope breathing phase; swayAmp eases toward its scoped target
+    swayAmp: 0,
 
-    look(dx, dy) {
-      actor.yaw -= dx * SENS;
-      actor.pitch -= dy * SENS;
+    look(dx, dy, scale = 1) {
+      actor.yaw -= dx * SENS * scale;
+      actor.pitch -= dy * SENS * scale;
       actor.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, actor.pitch));
     },
 
@@ -55,6 +57,14 @@ export function createPlayerController(actor) {
       if (a.crouch) speed *= 0.36;
       if (a.scoped) speed *= 0.45;
       stepLocomotion(a, wishX, wishZ, speed, input.state.keys.has('Space'), dt, colliders);
+      // Scope sway: a slow breathing figure, larger at higher magnification and on the
+      // move, settling when crouched and still. It feeds viewPitch/viewYaw below, so the
+      // reticle and the shot never disagree — holding a lane means managing the sway.
+      ctl.swayT += dt * 3.9;
+      const swayTarget = a.scoped && a.alive
+        ? 0.0011 * currentZoom(a, def) * (a.crouch ? 0.4 : 1) * (a.speed2d > 0.4 ? 1.7 : 1)
+        : 0;
+      ctl.swayAmp += (swayTarget - ctl.swayAmp) * Math.min(1, dt * 5);
       // View bob: grows with ground speed, settles when still.
       const target = a.onGround && a.alive ? Math.min(1, a.speed2d / 5) : 0;
       ctl.bobAmount += (target - ctl.bobAmount) * Math.min(1, dt * 8);
@@ -71,8 +81,8 @@ export function createPlayerController(actor) {
       return out;
     },
 
-    viewPitch() { return actor.pitch + ctl.punch; },
-    viewYaw() { return actor.yaw + ctl.punchYaw; },
+    viewPitch() { return actor.pitch + ctl.punch + Math.sin(ctl.swayT) * ctl.swayAmp; },
+    viewYaw() { return actor.yaw + ctl.punchYaw + Math.sin(ctl.swayT * 0.63 + 1.3) * ctl.swayAmp * 0.8; },
   };
   return ctl;
 }

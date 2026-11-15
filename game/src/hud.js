@@ -7,14 +7,18 @@ import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 const $ = (id) => document.getElementById(id);
 
 export const BUY_ITEMS = [
-  { item: 'harrier', key: '1' },
-  { item: 'krait', key: '2' },
-  { item: 'boar', key: '3' },
-  { item: 'lance', key: '4' },
-  { item: 'armor1', key: '5' },
-  { item: 'armor2', key: '6' },
-  { item: 'he', key: '7' },
-  { item: 'flash', key: '8' },
+  { item: 'magpie', key: '1', code: 'Digit1' },
+  { item: 'boar', key: '2', code: 'Digit2' },
+  { item: 'krait', key: '3', code: 'Digit3' },
+  { item: 'jackdaw', key: '4', code: 'Digit4' },
+  { item: 'harrier', key: '5', code: 'Digit5' },
+  { item: 'heron', key: '6', code: 'Digit6' },
+  { item: 'oxen', key: '7', code: 'Digit7' },
+  { item: 'lance', key: '8', code: 'Digit8' },
+  { item: 'armor1', key: '9', code: 'Digit9' },
+  { item: 'armor2', key: '0', code: 'Digit0' },
+  { item: 'he', key: '-', code: 'Minus' },
+  { item: 'flash', key: '=', code: 'Equal' },
 ];
 
 export function itemInfo(item) {
@@ -32,7 +36,7 @@ export function createHud() {
     killfeed: $('killfeed'), banner: $('banner'), bannerTitle: $('banner-title'), bannerSub: $('banner-sub'),
     prompt: $('prompt'), channelWrap: $('channel'), channelFill: $('channel-fill'), channelLabel: $('channel-label'),
     bombStatus: $('bomb-status'), damage: $('damage-flash'), blind: $('blind-flash'), hitdir: $('hit-dir'),
-    crosshair: $('crosshair'), hitmarker: $('hitmarker'), scope: $('scope'), spectate: $('spectate'),
+    crosshair: $('crosshair'), hitmarker: $('hitmarker'), scope: $('scope'), scopeZoom: $('scope-zoom'), spectate: $('spectate'),
     menu: $('menu'), buy: $('buy'), buyGrid: $('buy-grid'), buyMoney: $('buy-money'), buyNote: $('buy-note'),
     pause: $('pause'), over: $('matchover'), overTitle: $('over-title'), overSub: $('over-sub'),
     board: $('scoreboard'), boardWrap: $('board-wrap'), carrierTag: $('carrier-tag'),
@@ -116,7 +120,14 @@ export function createHud() {
       clearTimeout(hud._hdT);
       hud._hdT = setTimeout(() => els.hitdir.classList.remove('show'), 700);
     },
-    setScope(on) { els.scope.classList.toggle('show', !!on); },
+    // ADS state: a closed scope draws its lens and mil-dot reticle, a reflex sight its
+    // open window and dot; either way the hip crosshair gives the centre over.
+    setScope(on, optic, label) {
+      els.scope.classList.toggle('show', !!on);
+      els.scope.classList.toggle('dot', optic === 'dot');
+      els.scopeZoom.textContent = label || '';
+      els.crosshair.style.opacity = on ? '0' : '';
+    },
     setSpectate(text) {
       if (text) { els.spectate.textContent = text; els.spectate.classList.add('show'); }
       else els.spectate.classList.remove('show');
@@ -148,13 +159,13 @@ export function createHud() {
     },
     refreshBuy(actor, canBuyNow) {
       els.buyMoney.textContent = '$' + actor.money.toLocaleString('en-US');
-      els.buyNote.textContent = canBuyNow ? 'Click or press 1-8. B or Esc to close.' : 'Buy window closed — items unlock at the next freeze.';
+      els.buyNote.textContent = canBuyNow ? 'Click an item or press its key. B or Esc to close.' : 'Buy window closed — items unlock at the next freeze.';
       for (const btn of els.buyGrid.children) {
         const item = btn.dataset.item;
         const info = itemInfo(item);
         let owned = false;
         const lo = actor.loadout;
-        if (WEAPONS[item]) owned = lo.primary && lo.primary.id === item;
+        if (WEAPONS[item]) owned = (lo[WEAPONS[item].slot] || {}).id === item;
         else if (GRENADES[item]) owned = lo[item] >= 1;
         else owned = lo.armor >= (item === 'armor1' ? 1 : 2);
         btn.classList.toggle('owned', !!owned);

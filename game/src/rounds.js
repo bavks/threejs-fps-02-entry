@@ -34,7 +34,7 @@ export function createMatch(actors, squads, map, random) {
     bombPos: { x: 0, z: 0 },
     bombTimer: 0,
     defuser: null,
-    channel: null, // { actor, kind, progress, need }
+    channel: null,
     events: [],
     winner: -1,
     siteOf(id) { return SITES.find((s) => s.id === id); },
@@ -167,7 +167,7 @@ export function createMatch(actors, squads, map, random) {
         killer.kills += 1;
         if (match.mode === 'defusal') killer.money += 300;
       }
-      if (match.carrier === victim) match.carrier = null; // the charge is lost with its carrier
+      if (match.carrier === victim) match.carrier = null;
       if (match.mode === 'tdm' || match.mode === 'ffa') {
         victim.respawnT = 3;
         if (match.mode === 'tdm') {
@@ -255,7 +255,7 @@ export function createMatch(actors, squads, map, random) {
     a.flashBlindUntil = 0;
     a.bloom = 0;
     a.crouch = false;
-    a.yaw = Math.atan2(a.pos.x, a.pos.z); // face the yard's centre
+    a.yaw = Math.atan2(a.pos.x, a.pos.z);
     const lo = a.loadout;
     if (lo.primary) { lo.primary.mag = WEAPONS[lo.primary.id].mag; lo.primary.reserve = Math.max(lo.primary.reserve, WEAPONS[lo.primary.id].reserve); }
     lo.sidearm.mag = WEAPONS[lo.sidearm.id].mag;

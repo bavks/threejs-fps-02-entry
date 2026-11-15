@@ -12,14 +12,14 @@ export function createBotAI(actor, random) {
     actor,
     skill: 0.85 + random() * 0.3,
     state: 'advance',
-    plan: null, // set by the round logic each round
+    plan: null, // round plan
     goalNode: 0,
     pathNode: 0,
     thinkT: random() * 0.12,
-    seen: null, // enemy actor currently perceived
+    seen: null, // current target
     lastSeen: { x: 0, z: 0 },
     lastSeenT: -9,
-    spottedAt: 0, // when the current target was first seen (reaction time)
+    spottedAt: 0, // first-seen time
     burstLeft: 0,
     burstPauseT: 0,
     strafeDir: 1,
@@ -56,7 +56,7 @@ function perceive(brain, world, now) {
     const dist = Math.hypot(dx, dz);
     if (dist > VIEW_DIST || dist >= bestD) continue;
     const dot = dist > 0.01 ? (dx * fx + dz * fz) / dist : 1;
-    if (dot < 0.42 && dist > 4) continue; // ~65 degree half-angle, or point blank
+    if (dot < 0.42 && dist > 4) continue; // ~65° half-angle
     const ty = e.pos.y + e.height * 0.62;
     if (!lineOfSight(a.pos.x, eyeY, a.pos.z, e.pos.x, ty, e.pos.z, world.colliders)) continue;
     bestD = dist;

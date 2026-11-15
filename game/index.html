@@ -6,18 +6,18 @@
 <title>IRONFALL — a three.js tactical FPS</title>
 <style>
 :root{
-    --canvas:#14161a;
-    --surface:#1e2228;
-    --surface2:#262c34;
-    --hairline:#3a424c;
-    --ink:#ece7db;
-    --muted:#9aa3ab;
-    --accent:#d9a419;
-    --rust:#c65a2e;
-    --teal:#2e7f86;
-    --danger:#e0483e;
-    --font-ui:system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-readout:ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+--canvas:#14161a;
+--surface:#1e2228;
+--surface2:#262c34;
+--hairline:#3a424c;
+--ink:#ece7db;
+--muted:#9aa3ab;
+--accent:#d9a419;
+--rust:#c65a2e;
+--teal:#2e7f86;
+--danger:#e0483e;
+--font-ui:system-ui, -apple-system, 'Segoe UI', sans-serif;
+--font-readout:ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 *{ box-sizing:border-box;}
 html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:var(--ink);font-family:var(--font-ui);}
@@ -198,9 +198,9 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 <div id="hit-dir"></div>
 
 <div id="topbar">
-    <div class="side t0"><small id="label-0">JACKALS</small><b id="score-0">0</b></div>
-    <div class="mid"><div id="timer">1:40</div><div id="round-label">ROUND 1</div></div>
-    <div class="side t1"><small id="label-1">WARDENS</small><b id="score-1">0</b></div>
+<div class="side t0"><small id="label-0">JACKALS</small><b id="score-0">0</b></div>
+<div class="mid"><div id="timer">1:40</div><div id="round-label">ROUND 1</div></div>
+<div class="side t1"><small id="label-1">WARDENS</small><b id="score-1">0</b></div>
 </div>
 <div id="bomb-status">CHARGE PLANTED</div>
 <div id="range-info"></div>
@@ -210,13 +210,13 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 <div id="killfeed"></div>
 
 <div id="healthwrap">
-    <span id="health-num">100</span><span id="armor-num"></span>
-    <div id="health-track"><div id="health-fill"></div></div>
+<span id="health-num">100</span><span id="armor-num"></span>
+<div id="health-track"><div id="health-fill"></div></div>
 </div>
 <div id="ammo">
-    <div id="ammo-name">P9 WREN</div>
-    <span id="ammo-mag">12</span> <span id="ammo-reserve">/ 96</span>
-    <div id="nades"></div>
+<div id="ammo-name">P9 WREN</div>
+<span id="ammo-mag">12</span> <span id="ammo-reserve">/ 96</span>
+<div id="nades"></div>
 </div>
 
 <div id="carrier-tag">YOU HAVE THE CHARGE — PLANT AT A SITE</div>
@@ -229,58 +229,58 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 
 <div id="menu" class="overlay show">
 <section class="panel" role="dialog" aria-modal="true">
-    <h1>IRON<span class="fall">FALL</span></h1>
-    <p>A tactical FPS in a smelter yard. <b>Defusal</b> is the full match: two squads of
-       five, two bomb sites, one charge — <b>plant it</b> as a Jackal, <b>defuse it</b> as
-       a Warden, earn and buy between rounds, <b>first to 9</b>, sides swap at the half.
-       Or pick a faster fight below.</p>
-    <div class="teams-line"><span class="j">JACKALS — attack, plant the charge</span><span class="w">WARDENS — defend the sites</span></div>
-    <div class="modes">
-      <button class="mode-btn main" data-mode="defusal" type="button"><b>Defusal</b><span>5v5 bomb rounds · economy · first to 9</span></button>
-      <button class="mode-btn" data-mode="tdm" type="button"><b>Team Deathmatch</b><span>5v5 · 3s respawns · first to 30 kills</span></button>
-      <button class="mode-btn" data-mode="ffa" type="button"><b>Free-for-All</b><span>10 fighters, no teams · first to 20 kills</span></button>
-      <button class="mode-btn" data-mode="range" type="button"><b>Practice Range</b><span>All 9 guns free · targets at 10–65 m</span></button>
-    </div>
-    <ul class="keys">
-      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
-      <li><kbd>Mouse</kbd> Look · <kbd>Click</kbd> Fire</li>
-      <li><kbd>Ctrl</kbd> Crouch · <kbd>Space</kbd> Jump</li>
-      <li><kbd>R</kbd> Reload · <kbd>1</kbd>/<kbd>2</kbd> Weapons</li>
-      <li><kbd>G</kbd> Frag · <kbd>F</kbd> Flash</li>
-      <li><kbd>E</kbd> Plant / defuse (hold)</li>
-      <li><kbd>B</kbd> Buy menu · <kbd>Tab</kbd> Scoreboard</li>
-      <li><kbd>RMB</kbd> Aim sight / scope · <kbd>X</kbd> Zoom level</li>
-      <li><kbd>K</kbd> Cycle the sky — day, cloud, sunset, night</li>
-    </ul>
-    <p>Stopping to shoot is how you hit: spread blooms on the move and under fire. Headshots
-       pay four times over. Deathmatches: keys 1–7 pick your next gun while you are down.</p>
+<h1>IRON<span class="fall">FALL</span></h1>
+<p>A tactical FPS in a smelter yard. <b>Defusal</b> is the full match: two squads of
+five, two bomb sites, one charge — <b>plant it</b> as a Jackal, <b>defuse it</b> as
+a Warden, earn and buy between rounds, <b>first to 9</b>, sides swap at the half.
+Or pick a faster fight below.</p>
+<div class="teams-line"><span class="j">JACKALS — attack, plant the charge</span><span class="w">WARDENS — defend the sites</span></div>
+<div class="modes">
+<button class="mode-btn main" data-mode="defusal" type="button"><b>Defusal</b><span>5v5 bomb rounds · economy · first to 9</span></button>
+<button class="mode-btn" data-mode="tdm" type="button"><b>Team Deathmatch</b><span>5v5 · 3s respawns · first to 30 kills</span></button>
+<button class="mode-btn" data-mode="ffa" type="button"><b>Free-for-All</b><span>10 fighters, no teams · first to 20 kills</span></button>
+<button class="mode-btn" data-mode="range" type="button"><b>Practice Range</b><span>All 9 guns free · targets at 10–65 m</span></button>
+</div>
+<ul class="keys">
+<li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
+<li><kbd>Mouse</kbd> Look · <kbd>Click</kbd> Fire</li>
+<li><kbd>Ctrl</kbd> Crouch · <kbd>Space</kbd> Jump</li>
+<li><kbd>R</kbd> Reload · <kbd>1</kbd>/<kbd>2</kbd> Weapons</li>
+<li><kbd>G</kbd> Frag · <kbd>F</kbd> Flash</li>
+<li><kbd>E</kbd> Plant / defuse (hold)</li>
+<li><kbd>B</kbd> Buy menu · <kbd>Tab</kbd> Scoreboard</li>
+<li><kbd>RMB</kbd> Aim sight / scope · <kbd>X</kbd> Zoom level</li>
+<li><kbd>K</kbd> Cycle the sky — day, cloud, sunset, night</li>
+</ul>
+<p>Stopping to shoot is how you hit: spread blooms on the move and under fire. Headshots
+pay four times over. Deathmatches: keys 1–7 pick your next gun while you are down.</p>
 </section>
 </div>
 
 <div id="buy" class="overlay">
 <section class="panel" role="dialog" aria-modal="true">
-    <div id="buy-head"><h2>Buy equipment</h2><span id="buy-money">$800</span></div>
-    <div id="buy-grid"></div>
-    <div id="buy-note"></div>
+<div id="buy-head"><h2>Buy equipment</h2><span id="buy-money">$800</span></div>
+<div id="buy-grid"></div>
+<div id="buy-note"></div>
 </section>
 </div>
 
 <div id="pause" class="overlay">
 <section class="panel" role="dialog">
-    <h2>Paused</h2>
-    <p>The round is waiting. Jump back in, or restart the match from round one.</p>
-    <button id="resume" class="big-btn" type="button">Resume</button>
-    <button id="restart" class="ghost-btn" type="button">Restart match</button>
-    <button id="pausemenu" class="ghost-btn" type="button">Menu</button>
+<h2>Paused</h2>
+<p>The round is waiting. Jump back in, or restart the match from round one.</p>
+<button id="resume" class="big-btn" type="button">Resume</button>
+<button id="restart" class="ghost-btn" type="button">Restart match</button>
+<button id="pausemenu" class="ghost-btn" type="button">Menu</button>
 </section>
 </div>
 
 <div id="matchover" class="overlay">
 <section class="panel" role="dialog">
-    <h2 id="over-title">Match over</h2>
-    <p id="over-sub"></p>
-    <button id="again" class="big-btn" type="button">Play again</button>
-    <button id="tomenu" class="ghost-btn" type="button">Menu</button>
+<h2 id="over-title">Match over</h2>
+<p id="over-sub"></p>
+<button id="again" class="big-btn" type="button">Play again</button>
+<button id="tomenu" class="ghost-btn" type="button">Menu</button>
 </section>
 </div>
 
@@ -289,7 +289,7 @@ html, body{ margin:0;height:100%;overflow:hidden;background:var(--canvas);color:
 <script type="importmap">
 {
 "imports": {
-    "three": "./vendor/three/three.module.min.js"
+"three": "./vendor/three/three.module.min.js"
 }
 }
 </script>

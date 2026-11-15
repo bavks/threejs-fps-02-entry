@@ -322,7 +322,7 @@ function tryFire(actor, now) {
   actor.semiLatch = true;
   if (def.burst) {
     actor.burstLeft -= 1;
-    if (actor.burstLeft > 0) actor.semiLatch = false; // the burst feeds itself
+    if (actor.burstLeft > 0) actor.semiLatch = false;
   }
   actor.nextShot = now + 60 / def.rpm;
   actor.lastShotAt = now;
@@ -438,11 +438,11 @@ function onGrenade(g) {
 }
 
 let simNow = 0;
-let skyClock = 0; // seconds since the last automatic sky change (continuous modes)
+let skyClock = 0; // sky auto-cycle clock
 let playing = false;
 let buyOpen = false;
 let specActor = null;
-let pendingPrimary = 'harrier'; // the deathmatch spawn pick, applied on respawn
+let pendingPrimary = 'harrier'; // deathmatch spawn pick
 
 function actuateBot(actor, dt) {
   const brain = actor.brain;
@@ -491,7 +491,6 @@ function step(dt) {
   if (match.mode === 'range') stepRange(dt);
   effects.update(dt, map.colliders, onGrenade);
   match.step(dt);
-  // Continuous modes turn the sky every two minutes.
   if (match.mode !== 'defusal') {
     skyClock += dt;
     if (skyClock > 120) { skyClock = 0; sky.cycle(); }
@@ -570,7 +569,7 @@ function drainEvents() {
         3400,
       );
     } else if (ev.type === 'roundStart') {
-      sky.cycle(); // a new round, a new sky
+      sky.cycle();
       hud.clearKillfeed();
       hud.setBomb(null);
       hud.setSpectate(null);
@@ -688,7 +687,7 @@ function onLockChange(locked) {
 function toggleBuy(force) {
   const open = force !== undefined ? force : !buyOpen;
   if (open === buyOpen) return;
-  if (open && match.mode !== 'defusal') return; // the purse exists only in defusal
+  if (open && match.mode !== 'defusal') return;
   if (open && !match.canBuy(player) && match.phase !== 'freeze') return;
   buyOpen = open;
   if (buyOpen) {
@@ -835,7 +834,7 @@ function syncCamera(dt) {
       camera.rotation.set(specActor.pitch, specActor.yaw, 0, 'YXZ');
     }
   }
-  if (player.alive) camera.rotation.z += controller.lean; // strafe roll
+  if (player.alive) camera.rotation.z += controller.lean;
   if (shake > 0.002) {
     camera.rotation.x += (random() * 2 - 1) * shake * 0.05;
     camera.rotation.z += (random() * 2 - 1) * shake * 0.04;
@@ -935,7 +934,7 @@ function stageShot(n) {
     player.loadout.primary = { id: 'lance', mag: 4, reserve: 25 };
     player.loadout.current = 'primary';
     player.scoped = true;
-    player.zoomIdx = 1; // the 5x level
+    player.zoomIdx = 1;
     player.money = 3400;
     place(vex, -18.6, -4.9, player.pos.x, player.pos.z);
     setModelGun(vex, 'harrier');
@@ -946,23 +945,23 @@ function stageShot(n) {
   } else if (n === 2) {
     match.mode = 'tdm';
     match.matchTime = 203;
-    sky.set(2, true); // sunset
-    place(player, 27.5, 8.5, 19, 17);
+    sky.set(0, true); // blue sky
+    place(player, 0, 17.5, 3, 25);
     player.pitch = -0.03;
     player.loadout.primary = { id: 'oxen', mag: 84, reserve: 200 };
     player.loadout.current = 'primary';
     player.health = 68;
     player.money = 2900;
-    place(ally, 25.2, 12.2, 17, 18.5);
+    place(ally, 3.5, 21, 10, 24.8);
     setModelGun(ally, 'jackdaw');
     const down = vex;
-    place(down, 21.5, 15.8);
+    place(down, 6.5, 22.5);
     down.alive = false;
     down.health = 0;
     down.deathT = 0.55;
-    place(onyx, 16.5, 19.5, player.pos.x, player.pos.z);
+    place(onyx, 12.5, 23.6, player.pos.x, player.pos.z);
     setModelGun(onyx, 'harrier');
-    place(rurik, 24.8, 20.8, player.pos.x, player.pos.z);
+    place(rurik, -3, 23.8, player.pos.x, player.pos.z);
     match.scores = [17, 12];
     hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> <span class="co">CHAIN HEADSHOT</span> ▸ <span class="k1">Koda</span>');
     hud.addKill('<span class="k0">Vex</span> ▸ BR-3 Jackdaw ▸ <span class="k1">Talon</span>');
@@ -970,20 +969,20 @@ function stageShot(n) {
     hud.els.callout.classList.add('still');
     hud.hitmarker(false);
     const m1 = muzzlePos(player, new THREE.Vector3());
-    effects.tracer(m1.x, m1.y, m1.z, 21.8, 1.1, 16.1);
-    effects.muzzle(m1.x, m1.y, m1.z, true, (21.8 - m1.x) / 9, (1.1 - m1.y) / 9, (16.1 - m1.z) / 9);
-    effects.impact(21.8, 1.1, 16.1, 'spark');
+    effects.tracer(m1.x, m1.y, m1.z, 12.2, 1.1, 23.4);
+    effects.muzzle(m1.x, m1.y, m1.z, true, (12.2 - m1.x) / 9, (1.1 - m1.y) / 9, (23.4 - m1.z) / 9);
+    effects.impact(12.2, 1.1, 23.4, 'spark');
     const m2 = muzzlePos(onyx, new THREE.Vector3());
-    effects.tracer(m2.x, m2.y, m2.z, 26.2, 1.3, 9.3);
-    effects.muzzle(m2.x, m2.y, m2.z, false, (26.2 - m2.x) / 13, (1.3 - m2.y) / 13, (9.3 - m2.z) / 13);
+    effects.tracer(m2.x, m2.y, m2.z, 1.2, 1.3, 18.3);
+    effects.muzzle(m2.x, m2.y, m2.z, false, (1.2 - m2.x) / 13, (1.3 - m2.y) / 13, (18.3 - m2.z) / 13);
     const m3 = muzzlePos(ally, new THREE.Vector3());
-    effects.tracer(m3.x, m3.y, m3.z, 17.2, 1.2, 19.0);
-    effects.muzzle(m3.x, m3.y, m3.z, false, (17.2 - m3.x) / 10, (1.2 - m3.y) / 10, (19.0 - m3.z) / 10);
-    effects.impact(17.2, 1.2, 19.0, 'dust');
+    effects.tracer(m3.x, m3.y, m3.z, 11.5, 1.2, 24.6);
+    effects.muzzle(m3.x, m3.y, m3.z, false, (11.5 - m3.x) / 10, (1.2 - m3.y) / 10, (24.6 - m3.z) / 10);
+    effects.impact(11.5, 1.2, 24.6, 'dust');
   } else if (n === 3) {
     match.phase = 'freeze';
     match.phaseT = 5;
-    sky.set(3, true); // night — the lamps carry the yard
+    sky.set(3, true); // night
     place(player, -26, 20, -6, 0);
     player.loadout.primary = { id: 'harrier', mag: 30, reserve: 120 };
     player.loadout.current = 'primary';
@@ -996,7 +995,7 @@ function stageShot(n) {
     buyOpen = true;
   } else {
     match.mode = 'range';
-    sky.set(1, true); // cloudy
+    sky.set(1, true);
     resetRange();
     placePlayerAtLine();
     player.loadout.primary = { id: 'harrier', mag: 27, reserve: 9999 };

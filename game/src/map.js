@@ -10,22 +10,22 @@ export const SITES = [
 ];
 
 export const SPAWNS = [
-  [[-28, 21], [-24, 21], [-26, 18.5], [-29, 18], [-23, 18.5]], // Jackals
-  [[28, -21], [24, -21], [26, -18.5], [29, -18], [23, -18.5]], // Wardens
+  [[-28,21],[-24,21],[-26,18.5],[-29,18],[-23,18.5]],// Jackals
+  [[28,-21],[24,-21],[26,-18.5],[29,-18],[23,-18.5]],// Wardens
 ];
 
 const NODES = [
-  [-26, 20], [-27, 8], [-27, -4], [-18.8, -6], [-19, -13.5], [-10.5, -13.8], [-16, -20],
-  [-9.5, -11], [0, -16], [0, -8], [-8, 0], [0, 1.5], [8, 0], [0, 9], [12, 7], [16, 11],
-  [21, 16], [31.3, 8.5], [31.3, -4.5], [26, -20], [-8, -20], [-14, -4], [14, -2], [6, -9],
-  [-14, 10], [24, 24], [-24, -11], [26, 12], [-15, -13.8],
+  [-26,20],[-27,8],[-27,-4],[-18.8,-6],[-19,-13.5],[-10.5,-13.8],[-16,-20],
+  [-9.5,-11],[0,-16],[0,-8],[-8,0],[0,1.5],[8,0],[0,9],[12,7],[16,11],
+  [21,16],[31.3,8.5],[31.3,-4.5],[26,-20],[-8,-20],[-14,-4],[14,-2],[6,-9],
+  [-14,10],[24,24],[-24,-11],[26,12],[-15,-13.8],
 ];
 const EDGES = [
-  [0, 1], [0, 24], [1, 2], [1, 24], [2, 3], [2, 21], [3, 4], [3, 7], [3, 21], [4, 6],
-  [4, 26], [4, 28], [5, 7], [5, 28], [6, 28], [7, 9], [8, 9], [8, 19], [8, 20], [8, 23],
-  [9, 10], [9, 23], [10, 11], [10, 21], [10, 24], [11, 12], [11, 13], [12, 14], [12, 22],
-  [12, 23], [13, 14], [13, 24], [14, 15], [14, 22], [15, 16], [16, 25], [16, 27], [17, 18],
-  [17, 27], [18, 19], [18, 22], [19, 20],
+  [0,1],[0,24],[1,2],[1,24],[2,3],[2,21],[3,4],[3,7],[3,21],[4,6],
+  [4,26],[4,28],[5,7],[5,28],[6,28],[7,9],[8,9],[8,19],[8,20],[8,23],
+  [9,10],[9,23],[10,11],[10,21],[10,24],[11,12],[11,13],[12,14],[12,22],
+  [12,23],[13,14],[13,24],[14,15],[14,22],[15,16],[16,25],[16,27],[17,18],
+  [17,27],[18,19],[18,22],[19,20],
 ];
 export const HOLD_FACE = { 26: [-19, -13.5], 6: [-13, -13], 27: [16, 11], 25: [21, 10], 23: [0, 1.5], 21: [-24, -2], 22: [8, 2] };
 export const HOLD_NODES = { A: [26, 6], B: [27, 25], mid: [23, 21, 22] };
@@ -59,6 +59,12 @@ export function createMap(scene, random) {
   const mats = {
     siding: new THREE.MeshStandardMaterial({ map: sidingTexture(random), roughness: 0.85, metalness: 0.25 }),
     sidingRust: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#7a4a34', '#5f3826'), roughness: 0.9, metalness: 0.2 }),
+    sidingTeal: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#41706f', '#2f5453'), roughness: 0.85, metalness: 0.25 }),
+    sidingSand: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#9c8a66', '#7c6c4c'), roughness: 0.9, metalness: 0.15 }),
+    steel: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#7e8894', '#626c78'), roughness: 0.7, metalness: 0.45 }),
+    glassLit: new THREE.MeshBasicMaterial({ color: 0xffc06a }),
+    glass: new THREE.MeshStandardMaterial({ color: 0x22343e, roughness: 0.25, metalness: 0.6 }),
+    door: new THREE.MeshStandardMaterial({ color: PALETTE.tealDark, roughness: 0.6, metalness: 0.5 }),
     concrete: new THREE.MeshStandardMaterial({ map: concreteTexture(random), roughness: 0.95 }),
     crate: new THREE.MeshStandardMaterial({ map: crateTexture(random), roughness: 0.9 }),
     containerRust: new THREE.MeshStandardMaterial({ map: containerTexture(random, '#a34d28', '#7e3a1f'), roughness: 0.8, metalness: 0.3 }),
@@ -99,23 +105,23 @@ export function createMap(scene, random) {
   apron.position.y = -0.02;
   scene.add(apron);
 
-  box(0, 2, -26.3, 69, 4, 0.6, mats.siding);
-  box(0, 2, 26.3, 69, 4, 0.6, mats.siding);
+  box(0, 2, -26.3, 69, 4, 0.6, mats.steel);
+  box(0, 2, 26.3, 69, 4, 0.6, mats.sidingSand);
   box(-34.3, 2, 0, 0.6, 4, 53, mats.siding);
-  box(34.3, 2, 0, 0.6, 4, 53, mats.siding);
+  box(34.3, 2, 0, 0.6, 4, 53, mats.sidingTeal);
 
   box(-13, 1.8, -20, 0.6, 3.6, 10, mats.concrete);
   box(-13, 1.8, -10.8, 0.6, 3.6, 3.6, mats.concrete);
   box(-25.5, 1.8, -9, 11, 3.6, 0.6, mats.concrete);
   box(-15.3, 1.8, -9, 4.6, 3.6, 0.6, mats.concrete);
-  box(-26, 2.75, -20, 5, 5.5, 5, mats.sidingRust); // the furnace block
+  box(-26, 2.75, -20, 5, 5.5, 5, mats.sidingRust);
   const furnaceGlow = new THREE.Mesh(new THREE.BoxGeometry(5.06, 0.5, 1.6), mats.glow);
   furnaceGlow.position.set(-26, 1.1, -20);
   scene.add(furnaceGlow);
   const chimney = visual(new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 7, 12), mats.metalDark));
   chimney.position.set(-26, 9, -20);
 
-  box(-9.5, 2.25, -16, 5, 4.5, 6, mats.siding);
+  box(-9.5, 2.25, -16, 5, 4.5, 6, mats.sidingTeal);
 
   box(-5, 1.8, -3.1, 0.6, 3.6, 3.8, mats.concrete);
   box(-5, 1.8, 3.1, 0.6, 3.6, 3.8, mats.concrete);
@@ -127,7 +133,7 @@ export function createMap(scene, random) {
   box(0, 3.85, -3, 11, 0.35, 0.5, mats.metalDark);
   box(0, 3.85, 3, 11, 0.35, 0.5, mats.metalDark);
 
-  box(9.5, 2, 14, 5, 4, 6, mats.siding);
+  box(9.5, 2, 14, 5, 4, 6, mats.sidingSand);
   box(17, 2, -19, 6, 4, 6, mats.concrete);
   box(-17, 2, 16, 6, 4, 6, mats.concrete);
 
@@ -147,24 +153,74 @@ export function createMap(scene, random) {
   box(23, 1.3, 23.5, 6, 2.6, 2.4, mats.containerTeal);
   box(23, 3.9, 23.5, 6, 2.6, 2.4, mats.containerRust);
 
-  const crate1 = [[-8, -12], [8, -2], [-2, 8], [12, 3.5], [14.5, 13], [-24, 6], [-6, 18], [24, -8], [2, -13], [-29, -11], [-15.5, -19]];
+  const crate1 = [[-8,-12],[8,-2],[-2,8],[12,3.5],[14.5,13],[-24,6],[-6,18],[24,-8],[2,-13],[-29,-11],[-15.5,-19]];
   for (const [x, z] of crate1) box(x, 0.575, z, 1.15, 1.15, 1.15, mats.crate);
-  const crate2 = [[-4, -11], [20, -12], [-11, 4], [25, 5]];
+  const crate2 = [[-4,-11],[20,-12],[-11,4],[25,5]];
   for (const [x, z] of crate2) { box(x, 0.575, z, 1.15, 1.15, 1.15, mats.crate); box(x, 1.725, z, 1.15, 1.15, 1.15, mats.crate); }
-  const low = [[0, -9.5], [18.5, 16.5], [-20.5, -11], [10, -6]];
+  const low = [[0,-9.5],[18.5,16.5],[-20.5,-11],[10,-6]];
   for (const [x, z] of low) box(x, 0.275, z, 1.6, 0.55, 1.6, mats.crate);
   box(-8, 0.575, 3.5, 0.5, 1.15, 3, mats.concrete);
   box(8, 0.575, -3.5, 0.5, 1.15, 3, mats.concrete);
   box(0, 0.575, 12.5, 3, 1.15, 0.5, mats.concrete);
   box(-22, 0.575, 2, 3, 1.15, 0.5, mats.concrete);
 
-  const extra = [[13, -13, 1], [-4, 16, 1], [16, -8, 1], [24, -13, 1], [-16, -1, 1], [26, 2, 0], [15, 19, 2], [-6, 13, 2], [-14, -22, 2], [-23, 12, 3], [4, 15, 3], [21, 3, 4]];
+  const extra = [[13,-13,1],[-4,16,1],[16,-8,1],[24,-13,1],[-16,-1,1],[26,2,0],[15,19,2],[-6,13,2],[-14,-22,2],[-23,12,3],[4,15,3],[21,3,4]];
   for (const [x, z, k] of extra) {
     if (k < 2) { box(x, .575, z, 1.15, 1.15, 1.15, mats.crate); if (k) box(x, 1.725, z, 1.15, 1.15, 1.15, mats.crate); }
     else if (k === 2) box(x, .275, z, 1.6, .55, 1.6, mats.crate);
     else if (k === 3) box(x, .425, z, 3, .85, .5, mats.concrete);
     else box(x, 1.3, z, 6, 2.6, 2.4, mats.containerTeal);
   }
+
+  // Dressing: windows and doors on solid wall faces.
+  function pane(x, z, ry, lit, door) {
+    const g = new THREE.Group();
+    const w = door ? 1.15 : 1.5, h = door ? 2.25 : 1.05;
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.26, h + 0.26, 0.1), mats.metalDark));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.13), door ? mats.door : (lit ? mats.glassLit : mats.glass)));
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(door ? 0.08 : w, door ? 0.08 : 0.06, 0.15), mats.metal);
+    bar.position.x = door ? w / 2 - 0.2 : 0;
+    g.add(bar);
+    g.position.set(x, door ? 1.14 : 2.45, z);
+    g.rotation.y = ry;
+    scene.add(g);
+  }
+  const wins = [[-20,-26,0,1],[-6,-26,0,0],[8,-26,0,1],[24,-26,0,0],[-18,26,3.14,0],[2,26,3.14,1],[20,26,3.14,1],[-34,-8,1.57,1],[-34,6,1.57,0],[34,-12,-1.57,1],[-10.8,-13,0,1],[-8.2,-13,0,1],[7,12.5,-1.57,0],[7,15.5,-1.57,1],[15.5,-16,0,1],[18.5,-16,0,0],[-14,14.5,1.57,1],[-14,17.5,1.57,0]];
+  for (const [x, z, ry, lit] of wins) pane(x, z, ry, lit, false);
+  for (const [x, z, ry] of [[-4, 26, 3.14], [-7, -16, 1.57], [9.5, 17, 0], [-17, 13, 3.14]]) pane(x, z, ry, false, true);
+
+  // Border wrecks: cars along the perimeter.
+  const wreckPaint = [0x8a4a30, 0x5d6a72, 0x74604a, 0x4e5e63, 0x93502c, 0x63504a, 0x707880].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0.35 }));
+  const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.26, 12);
+  function wreck(x, z, ry, ci, tilt, crushed) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.3, crushed ? 0.48 : 0.62, 1.85), wreckPaint[ci]);
+    body.position.y = crushed ? 0.4 : 0.58;
+    body.rotation.z = tilt;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.1, crushed ? 0.15 : 0.55, 1.65), mats.glass);
+    cab.position.set(-0.25, crushed ? 0.68 : 1.14, 0);
+    cab.rotation.z = tilt;
+    g.add(body, cab);
+    for (const [wx, wz] of [[-1.45, 0.95], [1.45, 0.95], [-1.45, -0.95], [1.45, -0.95]]) {
+      if (crushed && wx > 0) continue;
+      const w = new THREE.Mesh(wheelGeo, mats.dark);
+      w.rotation.x = Math.PI / 2;
+      w.position.set(wx, 0.36, wz);
+      g.add(w);
+    }
+    g.traverse((m) => { m.castShadow = true; m.receiveShadow = true; });
+    g.position.set(x, 0, z);
+    g.rotation.y = ry;
+    scene.add(g);
+    box(x, 0.55, z, ry ? 1.95 : 4.4, 1.1, ry ? 4.4 : 1.95, mats.dark).visible = false;
+  }
+  wreck(-12, 24.3, 0, 0, 0.05, false);
+  wreck(2, 24.3, 0, 3, -0.04, false);
+  wreck(14.5, 24.3, 0, 1, 0, true);
+  wreck(-32.5, -14, Math.PI / 2, 2, 0.06, false);
+  wreck(-32.5, 13, Math.PI / 2, 4, 0, false);
+  wreck(32.5, 19.5, Math.PI / 2, 5, -0.05, false);
+  wreck(32.5, -17, Math.PI / 2, 6, 0.03, false);
 
   for (const [x, z] of [[-12, -2], [12, -12], [-2, 20], [20, -2]]) {
     const pole = visual(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.4, 8), mats.metalDark));

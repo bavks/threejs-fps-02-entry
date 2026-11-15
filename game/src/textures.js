@@ -37,17 +37,19 @@ export function groundTexture(random) {
   const [c, ctx] = canvas(W, H);
   const px = (x) => ((x + 34) / 68) * W;
   const pz = (z) => ((z + 26) / 52) * H;
-  const m = W / 68; // pixels per metre
+  const m = W / 68;
   noise(ctx, W, H, '#55534e', ['#4a4844', '#605e57', '#6b675e', '#3f3e3a'], 5200, random);
   ctx.fillStyle = '#615d54';
   ctx.globalAlpha = 0.55;
   ctx.fillRect(px(-34), pz(-26), 24 * m, 20 * m);
   ctx.fillRect(px(-8), pz(-8), 16 * m, 16 * m);
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = 'rgba(20,20,20,0.35)';
+  ctx.fillStyle = 'rgba(228,222,202,0.14)';
+  for (let i = 0; i < 34; i++) for (let j = 0; j < 26; j++) if ((i + j) % 2 === 0) ctx.fillRect(px(2 * i - 34), pz(2 * j - 26), 2 * m, 2 * m);
+  ctx.strokeStyle = 'rgba(20,20,20,0.4)';
   ctx.lineWidth = 2;
-  for (let x = -32; x < 34; x += 4) { ctx.beginPath(); ctx.moveTo(px(x), 0); ctx.lineTo(px(x), H); ctx.stroke(); }
-  for (let z = -24; z < 26; z += 4) { ctx.beginPath(); ctx.moveTo(0, pz(z)); ctx.lineTo(W, pz(z)); ctx.stroke(); }
+  for (let x = -32; x < 34; x += 2) { ctx.beginPath(); ctx.moveTo(px(x), 0); ctx.lineTo(px(x), H); ctx.stroke(); }
+  for (let z = -24; z < 26; z += 2) { ctx.beginPath(); ctx.moveTo(0, pz(z)); ctx.lineTo(W, pz(z)); ctx.stroke(); }
   for (let i = 0; i < 26; i++) {
     const x = random() * W;
     const y = random() * H;
@@ -94,8 +96,8 @@ export function groundTexture(random) {
     ctx.lineTo(-0.6 * m, 0.3 * m); ctx.closePath(); ctx.fill();
     ctx.restore();
   };
-  arrow(-26, 14, Math.PI); // attackers push north
-  arrow(26, -14, 0); // defenders push south
+  arrow(-26, 14, Math.PI);
+  arrow(26, -14, 0);
   return texture(c);
 }
 
@@ -105,7 +107,7 @@ export function sidingTexture(random, base = '#6d7276', rib = '#5b6064') {
   ctx.fillStyle = rib;
   for (let x = 0; x < 256; x += 32) ctx.fillRect(x, 0, 5, 256);
   ctx.fillStyle = 'rgba(30,26,22,0.35)';
-  ctx.fillRect(0, 216, 256, 40); // grime at the foot of the wall
+  ctx.fillRect(0, 216, 256, 40)
   return texture(c, 2, 1);
 }
 
@@ -137,7 +139,7 @@ export function containerTexture(random, base, dark) {
   const [c, ctx] = canvas(256, 128);
   noise(ctx, 256, 128, base, [dark, '#00000022'], 300, random);
   ctx.fillStyle = dark;
-  for (let x = 6; x < 256; x += 22) ctx.fillRect(x, 0, 8, 128); // corrugation
+  for (let x = 6; x < 256; x += 22) ctx.fillRect(x, 0, 8, 128)
   ctx.fillStyle = 'rgba(20,16,12,0.4)';
   ctx.fillRect(0, 104, 256, 24);
   ctx.fillStyle = 'rgba(240,235,220,0.5)';

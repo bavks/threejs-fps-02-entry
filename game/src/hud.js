@@ -4,18 +4,18 @@ import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 const $ = (id) => document.getElementById(id);
 
 export const BUY_ITEMS = [
-  { item: 'magpie', key: '1', code: 'Digit1' },
-  { item: 'boar', key: '2', code: 'Digit2' },
-  { item: 'krait', key: '3', code: 'Digit3' },
-  { item: 'jackdaw', key: '4', code: 'Digit4' },
-  { item: 'harrier', key: '5', code: 'Digit5' },
-  { item: 'heron', key: '6', code: 'Digit6' },
-  { item: 'oxen', key: '7', code: 'Digit7' },
-  { item: 'lance', key: '8', code: 'Digit8' },
-  { item: 'armor1', key: '9', code: 'Digit9' },
-  { item: 'armor2', key: '0', code: 'Digit0' },
-  { item: 'he', key: '-', code: 'Minus' },
-  { item: 'flash', key: '=', code: 'Equal' },
+  { item:'magpie',key:'1',code:'Digit1' },
+  { item:'boar',key:'2',code:'Digit2' },
+  { item:'krait',key:'3',code:'Digit3' },
+  { item:'jackdaw',key:'4',code:'Digit4' },
+  { item:'harrier',key:'5',code:'Digit5' },
+  { item:'heron',key:'6',code:'Digit6' },
+  { item:'oxen',key:'7',code:'Digit7' },
+  { item:'lance',key:'8',code:'Digit8' },
+  { item:'armor1',key:'9',code:'Digit9' },
+  { item:'armor2',key:'0',code:'Digit0' },
+  { item:'he',key:'-',code:'Minus' },
+  { item:'flash',key:'=',code:'Equal' },
 ];
 
 export function itemInfo(item) {

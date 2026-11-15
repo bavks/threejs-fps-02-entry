@@ -28,7 +28,7 @@ export function createEffects(scene, glowTex) {
   const FLAMES = 14;
   const flameGeo = new THREE.ConeGeometry(0.085, 1, 7, 1, true);
   flameGeo.translate(0, 0.5, 0);
-  flameGeo.rotateX(Math.PI / 2); // apex points +Z, base at the origin
+  flameGeo.rotateX(Math.PI / 2)
   const flameMatA = new THREE.MeshBasicMaterial({ color: 0xff7a26, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
   const flameMatB = new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
   const flames = [];
@@ -154,15 +154,15 @@ export function createEffects(scene, glowTex) {
         burst(x, y, z, 3, 0xfff2cc, 1.8, 0.18, 2);
         puff(x, y, z, 0, 0.35, 0, 0.5, 0.7);
       } else {
-        burst(x, y, z, 7, 0x9a938a, 1.3, 0.55, 2); // dust
-        burst(x, y, z, 2, 0xffc266, 2.2, 0.2, 3); // a spark or two off hard edges
+        burst(x, y, z, 7, 0x9a938a, 1.3, 0.55, 2);
+        burst(x, y, z, 2, 0xffc266, 2.2, 0.2, 3);
       }
     },
 
     explosion(x, y, z) {
       burst(x, y, z, 46, 0xff7a26, 6.5, 0.7, 2.5);
       burst(x, y, z, 26, 0xffd9a0, 4, 0.45, 1.5);
-      burst(x, y, z, 18, 0x555049, 2.2, 1.1, -0.6); // smoke drifts up
+      burst(x, y, z, 18, 0x555049, 2.2, 1.1, -0.6)
       flame(x, y + 0.3, z, 0, 1, 0, true);
       for (let i = 0; i < 6; i++) puff(x, y + 0.4, z, (Math.random() - 0.5) * 1.4, 0.8 + Math.random() * 0.8, (Math.random() - 0.5) * 1.4, 0.3, 1.2 + Math.random() * 0.7);
       flashSprite.position.set(x, y + 0.4, z);

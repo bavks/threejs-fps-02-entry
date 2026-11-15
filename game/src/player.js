@@ -8,14 +8,14 @@ const PITCH_MAX = 1.45;
 export function createPlayerController(actor) {
   const ctl = {
     actor,
-    punch: 0, // recoil pitch offset, decays back to zero
+    punch: 0, // recoil pitch offset
     punchYaw: 0,
     bobPhase: 0,
     bobAmount: 0,
-    swayT: 0, // scope breathing phase; swayAmp eases toward its scoped target
+    swayT: 0, // scope breathing phase
     swayAmp: 0,
-    landDip: 0, // landing spring: set by the fall that just ended, decays in step
-    lean: 0, // strafe roll, smoothed toward the lateral-speed target
+    landDip: 0, // landing spring
+    lean: 0, // strafe roll
 
     look(dx, dy, scale = 1) {
       actor.yaw -= dx * SENS * scale;
@@ -26,7 +26,7 @@ export function createPlayerController(actor) {
     kick(pitchDeg, yawDeg) {
       ctl.punch += (pitchDeg * Math.PI) / 180;
       ctl.punchYaw += (yawDeg * Math.PI) / 180;
-      actor.pitch += (pitchDeg * Math.PI) / 180 * 0.35; // part of the kick is permanent aim shift
+      actor.pitch += (pitchDeg * Math.PI) / 180 * 0.35; // part is permanent aim shift
       actor.pitch = Math.min(PITCH_MAX, actor.pitch);
     },
 
@@ -60,7 +60,7 @@ export function createPlayerController(actor) {
       stepLocomotion(a, wishX, wishZ, speed, input.state.keys.has('Space'), dt, colliders);
       if (wasAir && a.onGround) ctl.landDip = Math.min(0.55, -vy * 0.045);
       ctl.landDip = Math.max(0, ctl.landDip - dt * 2.4);
-      const lat = a.vel.x * cos - a.vel.z * sin; // speed along the camera's right
+      const lat = a.vel.x * cos - a.vel.z * sin; // lateral speed
       const leanT = a.onGround && a.alive ? Math.max(-0.04, Math.min(0.04, -lat * 0.007)) : 0;
       ctl.lean += (leanT - ctl.lean) * Math.min(1, dt * 7);
       ctl.swayT += dt * 3.9;

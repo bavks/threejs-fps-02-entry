@@ -1,11 +1,10 @@
-// Weapons: nine guns with distinct jobs, plus two grenades and two armour tiers. The numbers
-// are the game: a headshot multiplies damage, damage falls off past a gun's range, and spread
-// (in degrees, converted where it is used) grows with movement, air time and sustained fire —
-// so stopping, crouching and bursting are how you hit things. Firing itself is resolved by
-// main.js with physics.rayWorld; this module owns the data, the maths and the gun models.
-// Optics: a gun with `zooms` can be aimed with RMB. `optic: 'dot'` is an open reflex sight
-// (low zoom, sight picture stays open); `optic: 'scope'` is a closed tube (circular lens,
-// mil-dots). The Lance carries two zoom levels, toggled with X or the wheel while aiming.
+// Weapons: nine guns with distinct jobs, plus two grenades and two armour tiers. The
+// numbers are the game: a headshot multiplies damage, damage falls off past a gun's range,
+// and spread grows with movement, air time and sustained fire — so stopping, crouching and
+// bursting are how you hit things. Firing is resolved by main.js; this module owns the
+// data, the maths and the gun models. Optics: a gun with `zooms` aims with RMB —
+// `optic: 'dot'` is an open reflex sight, `optic: 'scope'` a closed tube with mil-dots.
+// The Lance carries two zoom levels, toggled with X or the wheel while aiming.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -16,7 +15,7 @@ export const WEAPONS = {
     recoil: 0.5, range: 20, minFactor: 0.45, pellets: 1, speed: 5.0,
   },
   magpie: {
-    name: 'M7 Magpie', slot: 'sidearm', price: 700, blurb: 'Revolver. Six heavy rounds — a pocket cannon that kicks like one.', damage: 62, headMult: 3, rpm: 150, auto: false,
+    name: 'M7 Magpie', slot: 'sidearm', price: 700, blurb: 'Revolver. Six heavy rounds — a pocket cannon.', damage: 62, headMult: 3, rpm: 150, auto: false,
     mag: 6, reserve: 36, reload: 2.6, spread: 0.5, spreadMove: 2.0, spreadAir: 5, bloom: 0.5,
     recoil: 1.9, range: 24, minFactor: 0.6, pellets: 1, speed: 5.0,
   },
@@ -26,38 +25,38 @@ export const WEAPONS = {
     recoil: 2.6, range: 9, minFactor: 0.2, pellets: 8, speed: 4.8,
   },
   krait: {
-    name: 'Krait SMG', slot: 'primary', price: 1250, blurb: 'Fast, light, forgiving on the move. Weak at range.', damage: 26, headMult: 4, rpm: 820, auto: true,
+    name: 'Krait SMG', slot: 'primary', price: 1250, blurb: 'Fast and forgiving on the move. Weak at range.', damage: 26, headMult: 4, rpm: 820, auto: true,
     mag: 32, reserve: 128, reload: 2.1, spread: 0.85, spreadMove: 1.1, spreadAir: 4, bloom: 0.16,
     recoil: 0.34, range: 16, minFactor: 0.5, pellets: 1, speed: 5.1,
   },
   jackdaw: {
-    name: 'BR-3 Jackdaw', slot: 'primary', price: 2300, blurb: 'Burst rifle. Three-round bursts stitch a chest or a head.', damage: 34, headMult: 4, rpm: 780, auto: false, burst: 3,
+    name: 'BR-3 Jackdaw', slot: 'primary', price: 2300, blurb: 'Burst rifle. Three rounds stitch a chest or a head.', damage: 34, headMult: 4, rpm: 780, auto: false, burst: 3,
     mag: 30, reserve: 120, reload: 2.5, spread: 0.48, spreadMove: 2.2, spreadAir: 5.5, bloom: 0.14,
     recoil: 0.52, range: 25, minFactor: 0.55, pellets: 1, speed: 4.9,
   },
   harrier: {
-    name: 'Harrier AR', slot: 'primary', price: 2700, blurb: 'The rifle, with a red-dot sight. Lethal to the head, the default buy.', damage: 36, headMult: 4, rpm: 660, auto: true,
+    name: 'Harrier AR', slot: 'primary', price: 2700, blurb: 'The rifle, with a red-dot sight. The default buy.', damage: 36, headMult: 4, rpm: 660, auto: true,
     mag: 30, reserve: 120, reload: 2.4, spread: 0.42, spreadMove: 2.6, spreadAir: 6, bloom: 0.22,
     recoil: 0.46, range: 26, minFactor: 0.55, pellets: 1, speed: 4.9, zooms: [1.35], optic: 'dot',
   },
   heron: {
-    name: 'DMR-6 Heron', slot: 'primary', price: 3100, blurb: 'Semi-auto marksman rifle, 2.5x optic. Owns the long lanes.', damage: 58, headMult: 3, rpm: 235, auto: false,
+    name: 'DMR-6 Heron', slot: 'primary', price: 3100, blurb: 'Semi-auto marksman rifle, 2.5x optic. Owns long lanes.', damage: 58, headMult: 3, rpm: 235, auto: false,
     mag: 12, reserve: 60, reload: 2.8, spread: 0.1, spreadMove: 3.4, spreadAir: 7, bloom: 0.4,
     recoil: 1.7, range: 46, minFactor: 0.78, pellets: 1, speed: 4.7, zooms: [2.5], optic: 'scope',
   },
   oxen: {
-    name: 'MG-9 Oxen', slot: 'primary', price: 3400, blurb: 'Belt-fed LMG. A hundred rounds of go-away; plant your feet to aim it.', damage: 30, headMult: 4, rpm: 720, auto: true, heavy: true,
+    name: 'MG-9 Oxen', slot: 'primary', price: 3400, blurb: 'Belt-fed LMG. A hundred rounds; plant your feet to aim it.', damage: 30, headMult: 4, rpm: 720, auto: true, heavy: true,
     mag: 100, reserve: 200, reload: 5.4, spread: 1.15, spreadMove: 3.6, spreadAir: 6.5, bloom: 0.3,
     recoil: 0.52, range: 24, minFactor: 0.5, pellets: 1, speed: 4.45,
   },
   lance: {
-    name: 'Lance SR', slot: 'primary', price: 3500, blurb: 'Bolt-action. One body shot kills; X toggles the 2.5x/5x scope.', damage: 108, headMult: 2, rpm: 42, auto: false,
+    name: 'Lance SR', slot: 'primary', price: 3500, blurb: 'Bolt-action. One body shot kills; X toggles 2.5x/5x.', damage: 108, headMult: 2, rpm: 42, auto: false,
     mag: 5, reserve: 30, reload: 3.1, spread: 0.06, spreadMove: 4.5, spreadAir: 8, bloom: 0,
     recoil: 3.2, range: 60, minFactor: 0.85, pellets: 1, speed: 4.6, zooms: [2.5, 5], optic: 'scope',
   },
 };
 export const GRENADES = {
-  he: { name: 'Frag Charge', price: 300, key: 'he', blurb: 'High explosive. Clears corners and site plants. Throw with G.' },
+  he: { name: 'Frag Charge', price: 300, key: 'he', blurb: 'High explosive. Clears corners. Throw with G.' },
   flash: { name: 'Blind Charge', price: 200, key: 'flash', blurb: 'Blinds anyone looking at it. Throw with F.' },
 };
 export const ARMOR = [
@@ -83,7 +82,7 @@ export function currentGun(loadout) {
   return { held, def: WEAPONS[held.id] };
 }
 
-// Damage after range falloff, the head multiplier (capped by a helmet) and armour.
+// Damage after falloff, the head multiplier (helmet-capped) and armour.
 export function damageAt(def, dist, part, armorTier) {
   let dmg = def.damage;
   if (dist > def.range) {
@@ -94,14 +93,13 @@ export function damageAt(def, dist, part, armorTier) {
   return dmg * ARMOR[armorTier].factor;
 }
 
-// The magnification an actor is currently dialled to (1 for iron sights). The Lance's
-// second level is reached with X or the wheel while aiming; zoomIdx resets on a swap.
+// The magnification an actor is dialled to (1 for iron sights); zoomIdx resets on a swap.
 export function currentZoom(actor, def) {
   if (!def.zooms) return 1;
   return def.zooms[Math.min(actor.zoomIdx || 0, def.zooms.length - 1)];
 }
 
-// Total spread in radians for one shot. bloom is the shooter's running bloom in degrees.
+// Total spread in radians for one shot.
 export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloomDeg) {
   let deg = def.spread + bloomDeg;
   if (def.zooms && def.zooms[def.zooms.length - 1] >= 2 && !scoped) deg = Math.max(deg, 2.4); // hip-firing a scoped gun is a guess
@@ -111,11 +109,10 @@ export function spreadRadians(def, speedRatio, airborne, crouched, scoped, bloom
   return (deg * Math.PI) / 180;
 }
 
-// --- Gun models -------------------------------------------------------------
-// First-person viewmodels and the third-person guns bots carry are rounded builds on the
-// same anchors as the boxy originals: capsule receivers and stocks, tube barrels, ring
-// optics. Every centre and overall length matches the old model, so muzzle points, mounts
-// and the ADS picture stay where they were — only the shapes changed.
+// --- Gun models ---
+// Viewmodels and the guns bots carry are rounded builds on the same anchors as the boxy
+// originals: capsule receivers and stocks, tube barrels, ring optics. Every centre and
+// length matches, so muzzle points, mounts and the ADS picture stay put.
 const gunMats = {
   body: new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.45, metalness: 0.7 }),
   grip: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 }),

@@ -1,7 +1,6 @@
 // Effects: everything transient and visual. Tracers, muzzle flashes, impact bursts and
-// grenades are pooled and reused — nothing is allocated per frame. Grenades are small bodies
-// on the same AABB physics as actors, with velocity reflected on impact so they bounce off
-// walls and floors before their fuse runs out.
+// grenades are pooled — nothing is allocated per frame. Grenades are small bodies on the
+// same AABB physics as actors, bouncing off walls and floors until their fuse runs out.
 import * as THREE from 'three';
 import { moveBody } from './physics.js';
 
@@ -22,7 +21,7 @@ export function createEffects(scene, glowTex) {
   }
   let tracerIdx = 0;
 
-  // Muzzle flash: a glow sprite plus the one shared flash light, moved to whoever fired.
+  // Muzzle flash: a glow sprite plus the one shared flash light.
   const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffb347, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
   flashSprite.scale.setScalar(0.6);
   scene.add(flashSprite);
@@ -120,8 +119,7 @@ export function createEffects(scene, glowTex) {
       });
     },
 
-    // Advance everything. onGrenade(grenade) fires when a fuse ends; the caller applies
-    // damage/blind and this module removes the mesh.
+    // Advance everything. onGrenade(grenade) fires when a fuse ends.
     update(dt, colliders, onGrenade) {
       for (const t of tracerPool) {
         if (t.life <= 0) continue;
@@ -170,8 +168,7 @@ export function createEffects(scene, glowTex) {
   };
 }
 
-// The planted charge: a slab with a keypad, an antenna and a light that blinks faster as
-// the fuse runs down. Built once, shown and hidden by the round logic.
+// The planted charge: a slab whose light blinks faster as the fuse runs down.
 export function createBombProp(scene) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.34), new THREE.MeshStandardMaterial({ color: 0x35383c, roughness: 0.5, metalness: 0.5 }));

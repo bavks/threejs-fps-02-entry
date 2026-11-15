@@ -1,6 +1,6 @@
 // The player's body: mouse look with a recoil punch that springs back, and wish-direction
-// movement built from the camera yaw. All physics is the shared actor step — this module
-// only translates input into intent, so the player and the bots move by the same rules.
+// movement from the camera yaw. All physics is the shared actor step — this module only
+// translates input into intent, so the player and the bots move by the same rules.
 import { stepLocomotion, eyeHeight } from './actors.js';
 import { currentGun, currentZoom } from './weapons.js';
 
@@ -57,9 +57,8 @@ export function createPlayerController(actor) {
       if (a.crouch) speed *= 0.36;
       if (a.scoped) speed *= 0.45;
       stepLocomotion(a, wishX, wishZ, speed, input.state.keys.has('Space'), dt, colliders);
-      // Scope sway: a slow breathing figure, larger at higher magnification and on the
-      // move, settling when crouched and still. It feeds viewPitch/viewYaw below, so the
-      // reticle and the shot never disagree — holding a lane means managing the sway.
+      // Scope sway: a breathing figure, larger at higher magnification and on the move,
+      // settling crouched and still. It feeds the view below, so reticle and shot agree.
       ctl.swayT += dt * 3.9;
       const swayTarget = a.scoped && a.alive
         ? 0.0011 * currentZoom(a, def) * (a.crouch ? 0.4 : 1) * (a.speed2d > 0.4 ? 1.7 : 1)

@@ -1,7 +1,6 @@
-// Audio: every sound is synthesised with WebAudio — noise bursts through shaped filters for
-// gunfire, sine blips for beeps and markers. There are no audio files. Sounds from the world
-// are placed by distance and bearing from the listener, set once per frame by main.js. The
-// context is created on the first user gesture (the Play click), as browsers require.
+// Audio: every sound is synthesised with WebAudio — noise bursts through shaped filters
+// for gunfire, sine blips for beeps. No audio files. World sounds are placed by distance
+// and bearing from the listener; the context starts on the first user gesture.
 export function createAudio() {
   let ctx = null;
   let master = null;
@@ -25,7 +24,7 @@ export function createAudio() {
     }
   }
 
-  // A destination node for a sound at a world position: gain by distance, pan by bearing.
+  // A sound's destination node: gain by distance, pan by bearing.
   function place(x, z, baseVol) {
     if (x === undefined) return master;
     const dx = x - listener.x;
@@ -80,7 +79,7 @@ export function createAudio() {
     o.stop(t + dur + 0.02);
   }
 
-  // A gunshot: crack (highpassed noise) + body (lowpassed thump) + a falling sine for weight.
+  // A gunshot: crack, thump, and a falling sine for weight.
   function shot(kind, x, z) {
     if (!ctx) return;
     const dest = place(x, z, 1);

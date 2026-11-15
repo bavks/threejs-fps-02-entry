@@ -1,7 +1,6 @@
 // Procedural canvas textures: the yard's surfaces are painted once at boot, so the game
-// ships no image files and makes no network requests. The ground sheet carries the painted
-// bomb-site rings and letters, the rail line through the yard and the grime of a working
-// smelter — the details that make a screenshot read as a place.
+// ships no image files. The ground sheet carries the painted bomb-site rings, the rail
+// line and the grime of a working smelter.
 import * as THREE from 'three';
 
 function canvas(w, h) {
@@ -34,7 +33,7 @@ function noise(ctx, w, h, base, fleck, count, random) {
   ctx.globalAlpha = 1;
 }
 
-// The yard floor: 68 x 52 metres mapped to one sheet. worldToPx maps metres to pixels.
+// The yard floor: 68 x 52 metres on one sheet.
 export function groundTexture(random) {
   const W = 2048;
   const H = 1564;
@@ -65,7 +64,7 @@ export function groundTexture(random) {
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
-  // Rail line through the rail yard: two steel strips and sleepers, running north-south.
+  // Rail line through the rail yard: steel strips and sleepers.
   ctx.fillStyle = '#3a3a3c';
   ctx.fillRect(px(23.2), pz(6), 1.6 * m, 20 * m);
   ctx.fillStyle = '#2c2118';
@@ -156,7 +155,7 @@ export function containerTexture(random, base, dark) {
   return texture(c);
 }
 
-// A soft radial glow, used for muzzle flashes, the explosion core and the sun glare sprite.
+// A soft radial glow: muzzle flashes, the explosion core, sun glare.
 export function glowTexture() {
   const [c, ctx] = canvas(128, 128);
   const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 64);

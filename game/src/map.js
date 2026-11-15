@@ -1,7 +1,7 @@
-// The Foundry: one original map. A smelter yard split by a furnace hall (site A, north-west)
-// and a rail yard (site B, south-east), joined by a mid core, an A connector, a B link and a
-// roofed tunnel run along the east wall. Every solid is an AABB collider; the waypoint graph
-// below is how bots read the same space, with a BFS next-hop table built once at load.
+// The Foundry: one original map. A smelter yard split by a furnace hall (site A,
+// north-west) and a rail yard (site B, south-east), joined by a mid core, two connectors
+// and a roofed tunnel run. Every solid is an AABB collider; the waypoint graph below is
+// how bots read the same space, with a BFS next-hop table built once at load.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 import { makeBox } from './physics.js';
@@ -75,8 +75,7 @@ export function createMap(scene, random) {
     lamp: new THREE.MeshBasicMaterial({ color: 0xffe2b0 }),
   };
 
-  // box(): a rendered solid that also collides. visual(): rendered only (roofs high above
-  // the head are colliders too; skyline pieces are not).
+  // box(): a rendered solid that also collides. visual(): rendered only.
   function box(cx, cy, cz, w, h, d, mat) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(cx, cy, cz);
@@ -93,7 +92,7 @@ export function createMap(scene, random) {
     return mesh;
   }
 
-  // Ground: the painted yard sheet, over a dark apron that runs to the horizon.
+  // Ground: the painted yard sheet over a dark apron.
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(68, 52),
     new THREE.MeshStandardMaterial({ map: groundTexture(random), roughness: 0.96 }),
@@ -128,7 +127,7 @@ export function createMap(scene, random) {
   // Warehouse block between mid and the A connector.
   box(-9.5, 2.25, -16, 5, 4.5, 6, mats.siding);
 
-  // Mid core: four walls, doors west and east, the core machine inside, gantry beams above.
+  // Mid core: four walls, doors west and east, the core machine inside.
   box(-5, 1.8, -3.1, 0.6, 3.6, 3.8, mats.concrete);
   box(-5, 1.8, 3.1, 0.6, 3.6, 3.8, mats.concrete);
   box(5, 1.8, -3.1, 0.6, 3.6, 3.8, mats.concrete);
@@ -139,7 +138,7 @@ export function createMap(scene, random) {
   box(0, 3.85, -3, 11, 0.35, 0.5, mats.metalDark);
   box(0, 3.85, 3, 11, 0.35, 0.5, mats.metalDark);
 
-  // Standalone blocks that make the lanes: B link, defender cover, attacker cover.
+  // Standalone blocks that make the lanes.
   box(9.5, 2, 14, 5, 4, 6, mats.siding);
   box(17, 2, -19, 6, 4, 6, mats.concrete);
   box(-17, 2, 16, 6, 4, 6, mats.concrete);
@@ -163,8 +162,7 @@ export function createMap(scene, random) {
   box(23, 1.3, 23.5, 6, 2.6, 2.4, mats.containerTeal);
   box(23, 3.9, 23.5, 6, 2.6, 2.4, mats.containerRust);
 
-  // Crates: full cubes you fight around, doubles you cannot see over, low slabs you can
-  // jump onto and crouch behind.
+  // Crates: cubes you fight around, doubles you cannot see over, low slabs to crouch behind.
   const crate1 = [[-8, -12], [8, -2], [-2, 8], [12, 3.5], [14.5, 13], [-24, 6], [-6, 18], [24, -8], [2, -13], [-29, -11], [-15.5, -19]];
   for (const [x, z] of crate1) box(x, 0.575, z, 1.15, 1.15, 1.15, mats.crate);
   const crate2 = [[-4, -11], [20, -12], [-11, 4], [25, 5]];
@@ -177,7 +175,7 @@ export function createMap(scene, random) {
   box(0, 0.575, 12.5, 3, 1.15, 0.5, mats.concrete);
   box(-22, 0.575, 2, 3, 1.15, 0.5, mats.concrete);
 
-  // Lamp poles: emissive heads; three real point lights live in the hall, tunnels and core.
+  // Lamp poles with emissive heads.
   for (const [x, z] of [[-12, -2], [12, -12], [-2, 20], [20, -2]]) {
     const pole = visual(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.4, 8), mats.metalDark));
     pole.position.set(x, 2.2, z);
@@ -218,7 +216,7 @@ export function createMap(scene, random) {
   sun.shadow.camera.far = 130;
   sun.shadow.bias = -0.0006;
   scene.add(sun);
-  // A shadowless fill from the opposite quarter keeps unlit faces readable.
+  // A shadowless fill keeps unlit faces readable.
   const fill = new THREE.DirectionalLight(0xdfeaf5, 0.5);
   fill.position.set(-30, 24, 26);
   scene.add(fill);

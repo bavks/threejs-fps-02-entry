@@ -1,16 +1,16 @@
-// IRONFALL — boot and the one loop. A fixed 60 Hz simulation (movement, bot brains, combat,
-// grenades, the round machine) feeds a render at the display's rate (camera, models,
-// viewmodel, effects). Combat is resolved here and shared: the player and every bot fire
-// through tryFire, take damage through applyDamage and die through killActor, so one set of
-// rules — spread, falloff, headshots, armour — governs everyone. ?shot=1..4 with &seed=N
-// stages a deterministic scene for a screenshot instead of starting the menu.
+// IRONFALL — boot and the one loop. A fixed 60 Hz simulation (movement, bot brains,
+// combat, grenades, the mode machines) feeds a render at the display's rate. Combat is
+// resolved here and shared: the player and every bot fire through tryFire, take damage
+// through applyDamage and die through killActor, so one set of rules — spread, falloff,
+// headshots, armour — governs everyone, in every mode. ?shot=1..4 with &seed=N stages a
+// deterministic scene for a screenshot instead of starting the menu.
 import * as THREE from 'three';
 import { PALETTE, TEAM_NAMES } from './palette.js';
 import { mulberry32 } from './rng.js';
 import { createMap } from './map.js';
 import { rayWorld, rayBox } from './physics.js';
 import { createActor, buildActorModel, setModelGun, poseActorModel, stepLocomotion, eyeHeight, rayActor } from './actors.js';
-import { createBotAI, stepBot, botBuy } from './bots.js';
+import { createBotAI, stepBot, botBuy, freePick } from './bots.js';
 import { createMatch } from './rounds.js';
 import { createInput } from './input.js';
 import { createPlayerController } from './player.js';
@@ -47,7 +47,7 @@ const audio = createAudio();
 const effects = createEffects(scene, glowTexture());
 const bombProp = createBombProp(scene);
 
-// --- Cast ---------------------------------------------------------------------
+// --- Cast ---
 const BOT_NAMES = ['Vex', 'Onyx', 'Rurik', 'Sable', 'Koda', 'Miro', 'Talon', 'Ash', 'Reyes'];
 const player = createActor(0, 'You', true);
 const actors = [player];
@@ -68,7 +68,13 @@ for (const a of actors) {
 }
 const squads = [[player, actors[1], actors[2], actors[3], actors[4]], [actors[5], actors[6], actors[7], actors[8], actors[9]]];
 const match = createMatch(actors, squads, map, random);
-const world = { actors, colliders: map.colliders, map, noise: [], round: match, siteOf: match.siteOf, siteNodeOf: match.siteNodeOf };
+// Hostility is the mode's, not the shirt's: teammates in the team modes, everyone in
+// the free-for-all. Fire, perception and hearing all read it from here.
+const world = {
+  actors, colliders: map.colliders, map, noise: [], round: match, siteOf: match.siteOf, siteNodeOf: match.siteNodeOf,
+  hostile: (a, b) => (match.mode === 'ffa' ? a !== b : a.team !== b.team),
+  ffa: false,
+};
 const controller = createPlayerController(player);
 const input = createInput(renderer.domElement, onLockChange);
 
@@ -90,7 +96,95 @@ function showViewmodel(id) {
 }
 showViewmodel('wren');
 
-// --- Combat -------------------------------------------------------------------
+// --- Practice range ---
+// Four dummies in a row down the north lane from a firing line in the north-west
+// corner, at 10 / 25 / 50 / 65 metres — the longest clean straight the yard has.
+// Actor-shaped (same ray, hitboxes and rounded model) but outside the cast: hits are
+// tallied here, not through applyDamage, and a downed dummy stands back up in 3s.
+const LINE = { x: -33, z: -24.6, yaw: -Math.PI / 2 };
+const RANGE_SPOTS = [[-23, -24.6, 10], [-8, -24.6, 25], [17, -24.6, 50], [32, -24.6, 65]];
+const range = { built: false, targets: [], hits: 0, hs: 0, last: '' };
+
+function buildRange() {
+  range.built = true;
+  for (const [x, z, dist] of RANGE_SPOTS) {
+    const t = createActor(1, `Target ${dist}m`, false);
+    t.pos.x = x; t.pos.z = z;
+    t.yaw = Math.atan2(-(LINE.x - x), -(LINE.z - z));
+    t.dist = dist;
+    t.rockT = 0;
+    t.respawnT = 0;
+    buildActorModel(t);
+    scene.add(t.model);
+    range.targets.push(t);
+  }
+}
+
+function resetRange() {
+  if (!range.built) buildRange();
+  range.hits = 0;
+  range.hs = 0;
+  range.last = '';
+  for (const t of range.targets) {
+    t.alive = true; t.health = 100; t.deathT = 0; t.flashT = 0; t.rockT = 0; t.respawnT = 0;
+    t.model.visible = true;
+  }
+}
+
+function placePlayerAtLine() {
+  player.pos.x = LINE.x; player.pos.z = LINE.z; player.pos.y = 0;
+  player.vel.x = 0; player.vel.y = 0; player.vel.z = 0;
+  player.yaw = LINE.yaw;
+  player.pitch = 0;
+}
+
+function rangeHit(target, dmg, metres, part) {
+  target.health -= dmg;
+  target.flashT = 0.18;
+  target.rockT = 0.3;
+  range.hits += 1;
+  const head = part === 'head';
+  if (head) range.hs += 1;
+  const down = target.health <= 0;
+  if (down) { target.alive = false; target.health = 0; target.respawnT = 3; }
+  range.last = `${head ? 'HEADSHOT · ' : ''}HIT ${Math.round(dmg)} DMG · ${metres} M${down ? ' · TARGET DOWN' : ''}`;
+  hud.hitmarker(down);
+  audio.hit(head);
+}
+
+function stepRange(dt) {
+  for (const t of range.targets) {
+    if (t.alive) continue;
+    t.respawnT -= dt;
+    if (t.respawnT <= 0) { t.alive = true; t.health = 100; t.deathT = 0; }
+  }
+  if (!player.alive) {
+    player.respawnT -= dt;
+    if (player.respawnT <= 0) {
+      placePlayerAtLine();
+      player.alive = true;
+      player.health = 100;
+      player.deathT = 0;
+      hud.setSpectate(null);
+    }
+  }
+}
+
+// Every gun on the rack, free: keys 1-9 set the held gun outright, full magazine.
+const RANGE_GUNS = ['wren', 'magpie', 'boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
+function grantRangeGun(id) {
+  const lo = player.loadout;
+  const slot = WEAPONS[id].slot;
+  lo[slot] = { id, mag: WEAPONS[id].mag, reserve: 9999 };
+  lo.current = slot;
+  player.scoped = false;
+  player.zoomIdx = 0;
+  showViewmodel(id);
+  audio.draw();
+  range.last = `${WEAPONS[id].name.toUpperCase()} · ${WEAPONS[id].blurb}`;
+}
+
+// --- Combat ---
 const tmpDir = new THREE.Vector3();
 const tmpOrigin = new THREE.Vector3();
 let shake = 0;
@@ -137,12 +231,15 @@ function killActor(victim, attacker, headshot) {
   hud.addKill(`<span class="${kc}">${kName}</span> ▸ ${wName}${headshot ? ' <span class="hs">HEADSHOT</span>' : ''} ▸ <span class="${vc}">${victim.name}</span>`);
   if (attacker && attacker.isPlayer) audio.kill();
   if (victim.isPlayer) {
-    hud.setSpectate('You are down — spectating a teammate until the round ends');
+    hud.setSpectate(match.mode === 'defusal'
+      ? 'You are down — spectating a teammate until the round ends'
+      : 'You are down — respawning…');
     hud.setScope(false);
+    if (match.mode === 'range') victim.respawnT = 1;
   }
 }
 
-// One shot (or one pellet of several). Returns the point the round ended at.
+// One shot (or one pellet of several).
 function fireOne(actor, def, now) {
   const eyeY = actor.pos.y + eyeHeight(actor);
   const speedRatio = Math.min(1, actor.speed2d / def.speed);
@@ -160,17 +257,28 @@ function fireOne(actor, def, now) {
   let bestT = wallT;
   let bestActor = null;
   let bestPart = null;
+  let bestTarget = null;
   for (const other of actors) {
-    if (other === actor || !other.alive || other.team === actor.team) continue;
+    if (other === actor || !other.alive || !world.hostile(actor, other)) continue;
     const hit = rayActor(actor.pos.x, eyeY, actor.pos.z, tmpDir.x, tmpDir.y, tmpDir.z, other);
     if (hit && hit.t < bestT) { bestT = hit.t; bestActor = other; bestPart = hit.part; }
+  }
+  if (match.mode === 'range') {
+    for (const t of range.targets) {
+      if (!t.alive) continue;
+      const hit = rayActor(actor.pos.x, eyeY, actor.pos.z, tmpDir.x, tmpDir.y, tmpDir.z, t);
+      if (hit && hit.t < bestT) { bestT = hit.t; bestActor = null; bestTarget = t; bestPart = hit.part; }
+    }
   }
   const ex = actor.pos.x + tmpDir.x * bestT;
   const ey = eyeY + tmpDir.y * bestT;
   const ez = actor.pos.z + tmpDir.z * bestT;
   muzzlePos(actor, tmpOrigin);
   effects.tracer(tmpOrigin.x, tmpOrigin.y, tmpOrigin.z, ex, ey, ez);
-  if (bestActor) {
+  if (bestTarget) {
+    effects.impact(ex, ey, ez, 'blood');
+    rangeHit(bestTarget, damageAt(def, bestT, bestPart, 0), Math.round(bestT), bestPart);
+  } else if (bestActor) {
     effects.impact(ex, ey, ez, 'blood');
     applyDamage(bestActor, damageAt(def, bestT, bestPart, bestActor.loadout.armor), actor, bestPart);
   } else if (bestT < Infinity) {
@@ -188,7 +296,7 @@ function tryFire(actor, now) {
   }
   if (now < actor.nextShot) return;
   if (def.burst) {
-    // A burst gun fires its burst on one press, then latches until the trigger lifts.
+    // A burst gun fires its burst on one press, then latches.
     if (actor.burstLeft <= 0) {
       if (actor.semiLatch) return;
       actor.burstLeft = def.burst;
@@ -204,7 +312,7 @@ function tryFire(actor, now) {
   actor.semiLatch = true;
   if (def.burst) {
     actor.burstLeft -= 1;
-    if (actor.burstLeft > 0) actor.semiLatch = false; // the burst feeds itself; the latch waits for its last round
+    if (actor.burstLeft > 0) actor.semiLatch = false; // the burst feeds itself
   }
   actor.nextShot = now + 60 / def.rpm;
   actor.lastShotAt = now;
@@ -279,6 +387,14 @@ function onGrenade(g) {
       if (blocked) dmg *= 0.25;
       applyDamage(a, dmg, g.owner === a ? null : g.owner, 'body');
     }
+    if (match.mode === 'range') {
+      for (const t of range.targets) {
+        if (!t.alive) continue;
+        const d = Math.hypot(t.pos.x - x, t.pos.y + 0.9 - gy, t.pos.z - z);
+        if (d > 5.4) continue;
+        rangeHit(t, 94 * (1 - (d / 5.4) * 0.78), t.dist, 'body');
+      }
+    }
     if (player.alive && Math.hypot(player.pos.x - x, player.pos.z - z) < 13) shake = Math.min(0.6, shake + 0.3);
   } else {
     effects.impact(x, gy, z, 'spark');
@@ -306,16 +422,17 @@ function onGrenade(g) {
   }
 }
 
-// --- Actuation ------------------------------------------------------------------
+// --- Actuation ---
 let simNow = 0;
 let playing = false;
 let buyOpen = false;
 let specActor = null;
+let pendingPrimary = 'harrier'; // the deathmatch spawn pick, applied on respawn
 
 function actuateBot(actor, dt) {
   const brain = actor.brain;
   const intent = actor.intent;
-  // Turn toward the brain's facing at a human rate, faster with a live target.
+  // Turn toward the brain's facing at a human rate.
   const rate = brain.seen ? 13 : 8;
   let dy = intent.faceYaw - actor.yaw;
   while (dy > Math.PI) dy -= Math.PI * 2;
@@ -359,6 +476,7 @@ function step(dt) {
   }
   for (const bot of actors) if (!bot.isPlayer) actuateBot(bot, dt);
   if (player.alive) stepPlayer(dt);
+  if (match.mode === 'range') stepRange(dt);
   effects.update(dt, map.colliders, onGrenade);
   match.step(dt);
   drainEvents();
@@ -370,7 +488,7 @@ function step(dt) {
   }
 }
 
-// --- Round events → HUD, audio, models -------------------------------------------
+// --- Round events → HUD, audio, models ---
 function bannerForRound() {
   const atk = player.team === 0;
   hud.banner(
@@ -382,7 +500,59 @@ function bannerForRound() {
 
 function drainEvents() {
   for (const ev of match.events.splice(0)) {
-    if (ev.type === 'roundStart') {
+    if (ev.type === 'modeStart') {
+      hud.clearKillfeed();
+      hud.setBomb(null);
+      hud.setSpectate(null);
+      bombProp.hide();
+      world.ffa = ev.mode === 'ffa';
+      if (ev.mode === 'range') {
+        for (const bot of actors) if (!bot.isPlayer) bot.model.visible = false;
+        resetRange();
+        placePlayerAtLine();
+        player.loadout.he = 99; player.loadout.flash = 99; player.loadout.armor = 0;
+        player.loadout.sidearm.reserve = 9999;
+        grantRangeGun('harrier');
+        hud.banner('PRACTICE RANGE', 'Targets at 10 · 25 · 50 · 65 m — keys 1–9 switch guns, all free', 3200);
+      } else {
+        for (const bot of actors) {
+          if (bot.isPlayer) continue;
+          bot.model.visible = true;
+          freePick(bot, random);
+          setModelGun(bot, currentGun(bot.loadout).held.id);
+        }
+        const lo = player.loadout;
+        lo.primary = { id: 'harrier', mag: WEAPONS.harrier.mag, reserve: WEAPONS.harrier.reserve };
+        lo.current = 'primary';
+        lo.armor = 1;
+        pendingPrimary = 'harrier';
+        showViewmodel('harrier');
+        hud.banner(
+          ev.mode === 'tdm' ? 'TEAM DEATHMATCH' : 'FREE-FOR-ALL',
+          ev.mode === 'tdm' ? 'First squad to 30 kills — pick your next gun while you are down' : 'Every fighter for themselves — first to 20 kills',
+          3200,
+        );
+      }
+    } else if (ev.type === 'respawn') {
+      const a = ev.actor;
+      if (a.isPlayer) {
+        if (pendingPrimary && (!player.loadout.primary || player.loadout.primary.id !== pendingPrimary)) {
+          player.loadout.primary = { id: pendingPrimary, mag: WEAPONS[pendingPrimary].mag, reserve: WEAPONS[pendingPrimary].reserve };
+          player.loadout.current = 'primary';
+        }
+        showViewmodel(currentGun(player.loadout).held.id);
+        hud.setSpectate(null);
+      } else {
+        freePick(a, random);
+        setModelGun(a, currentGun(a.loadout).held.id);
+      }
+    } else if (ev.type === 'matchEnd') {
+      hud.banner(
+        match.mode === 'ffa' ? `${match.winnerName.toUpperCase()} HITS 20` : `${TEAM_NAMES[ev.winner].toUpperCase()} HIT 30`,
+        match.mode === 'ffa' ? 'The free-for-all is decided' : 'The deathmatch is decided',
+        3400,
+      );
+    } else if (ev.type === 'roundStart') {
       hud.clearKillfeed();
       hud.setBomb(null);
       hud.setSpectate(null);
@@ -428,22 +598,37 @@ function drainEvents() {
       hud.banner(`${TEAM_NAMES[ev.winner].toUpperCase()} WIN`, `Round ${how} — ${ev.scores[0]} : ${ev.scores[1]}`, 3400);
       audio.roundEnd(won);
     } else if (ev.type === 'matchOver') {
-      const playerWon = match.winner === player.team;
-      hud.showOver(
-        `${TEAM_NAMES[match.winner].toUpperCase()} TAKE THE MATCH`,
-        `Final score ${match.scores[0]} : ${match.scores[1]}. ${playerWon ? 'Your squad wins it.' : 'Your squad loses it — run it back.'}`,
-      );
+      if (match.mode === 'tdm') {
+        const playerWon = match.winner === player.team;
+        hud.showOver(
+          `${TEAM_NAMES[match.winner].toUpperCase()} WIN THE DEATHMATCH`,
+          `Final score ${match.scores[0]} : ${match.scores[1]} kills. You scored ${player.kills} with ${player.deaths} deaths. ${playerWon ? 'Your squad takes it.' : 'Your squad loses it — run it back.'}`,
+        );
+      } else if (match.mode === 'ffa') {
+        const rank = 1 + actors.filter((a) => a !== player && a.kills > player.kills).length;
+        hud.showOver(
+          match.winnerName === player.name ? 'YOU WIN THE FREE-FOR-ALL' : `${match.winnerName.toUpperCase()} WINS THE FREE-FOR-ALL`,
+          `First to 20 kills. You placed #${rank} of 10 with ${player.kills} kills and ${player.deaths} deaths.`,
+        );
+      } else {
+        const playerWon = match.winner === player.team;
+        hud.showOver(
+          `${TEAM_NAMES[match.winner].toUpperCase()} TAKE THE MATCH`,
+          `Final score ${match.scores[0]} : ${match.scores[1]}. ${playerWon ? 'Your squad wins it.' : 'Your squad loses it — run it back.'}`,
+        );
+      }
       if (document.pointerLockElement) document.exitPointerLock();
       playing = false;
     }
   }
 }
 
-// --- Input wiring -----------------------------------------------------------------
-hud.onPlay = () => {
+// --- Input wiring ---
+hud.onPlay = (mode) => {
   audio.unlock();
   hud.hideMenu();
-  match.startMatch();
+  hud.hideOver();
+  match.startMode(mode || 'defusal');
   playing = true;
   input.requestLock();
 };
@@ -451,10 +636,20 @@ hud.onResume = () => { hud.hidePause(); input.requestLock(); };
 hud.onRestart = () => {
   hud.hidePause();
   hud.hideOver();
-  match.startMatch();
+  match.startMode(match.mode);
   playing = true;
   input.requestLock();
 };
+hud.onMenu = () => {
+  hud.hidePause();
+  hud.hideOver();
+  hud.hideLoadout();
+  hud.setRange(null);
+  hud.showMenu();
+  playing = false;
+};
+hud.onPickGun = (id) => { pendingPrimary = id; };
+hud.buildLoadout(['boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'].map((id, i) => ({ id, key: String(i + 1) })));
 hud.onBuy = (item) => {
   const err = match.tryBuy(player, item);
   if (err) { audio.denied(); hud.els.buyNote.textContent = err; }
@@ -474,6 +669,7 @@ function onLockChange(locked) {
 function toggleBuy(force) {
   const open = force !== undefined ? force : !buyOpen;
   if (open === buyOpen) return;
+  if (open && match.mode !== 'defusal') return; // the purse exists only in defusal
   if (open && !match.canBuy(player) && match.phase !== 'freeze') return;
   buyOpen = open;
   if (buyOpen) {
@@ -496,6 +692,18 @@ function handleKeys() {
     return;
   }
   if (!playing) return;
+  if (match.mode === 'range') {
+    // Keys 1-9 are the rack: each press hands over that gun, loaded.
+    for (let i = 0; i < RANGE_GUNS.length; i++) {
+      if (input.wasPressed(`Digit${i + 1}`)) grantRangeGun(RANGE_GUNS[i]);
+    }
+  } else if (!player.alive && match.mode !== 'defusal') {
+    // Down in a deathmatch: keys 1-7 choose the primary you respawn with.
+    const picks = ['boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
+    for (let i = 0; i < picks.length; i++) {
+      if (input.wasPressed(`Digit${i + 1}`)) pendingPrimary = picks[i];
+    }
+  }
   if (input.wasPressed('KeyR')) startReload(player, simNow);
   // Zoom toggle: X any time the held gun carries two levels, the wheel while aiming.
   const heldDef = currentGun(player.loadout).def;
@@ -519,7 +727,7 @@ function handleKeys() {
     showViewmodel(player.loadout.sidearm.id);
     audio.draw();
   }
-  if (input.state.wheel !== 0) {
+  if (input.state.wheel !== 0 && match.mode !== 'range') {
     const toPrimary = player.loadout.current === 'sidearm' && player.loadout.primary;
     player.loadout.current = toPrimary ? 'primary' : 'sidearm';
     player.zoomIdx = 0;
@@ -533,27 +741,53 @@ function handleKeys() {
   else hud.hideBoard();
 }
 
-// --- HUD sync -----------------------------------------------------------------------
+// --- HUD sync ---
 const fmtTime = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
 function syncHud() {
   const { held, def } = currentGun(player.loadout);
   hud.setHealth(player.health, player.loadout.armor);
   hud.setAmmo(player.reloading ? '—' : held.mag, held.reserve, def.name.toUpperCase());
-  hud.setMoney(player.money);
-  hud.setScores(match.scores[0], match.scores[1], match.phase === 'matchover' ? 'FULL TIME' : `ROUND ${match.round} / 17`);
-  if (match.bombPlanted) hud.setTimer(fmtTime(match.bombTimer), match.bombTimer < 10);
-  else if (match.phase === 'freeze') hud.setTimer(fmtTime(match.phaseT), false);
-  else hud.setTimer(fmtTime(match.roundTime), match.roundTime < 15);
-  hud.setCarrier(match.carrier === player && !match.bombPlanted);
+  const mode = match.mode;
+  hud.showMoney(mode === 'defusal');
+  hud.setRange(mode === 'range' ? (range.last || 'TARGETS AT 10 · 25 · 50 · 65 M — KEYS 1–9 SWITCH GUNS') : null);
+  if (mode === 'defusal') {
+    hud.setLabels('JACKALS', 'WARDENS');
+    hud.hideLoadout();
+    hud.setScores(match.scores[0], match.scores[1], match.phase === 'matchover' ? 'FULL TIME' : `ROUND ${match.round} / 17`);
+    if (match.bombPlanted) hud.setTimer(fmtTime(match.bombTimer), match.bombTimer < 10);
+    else if (match.phase === 'freeze') hud.setTimer(fmtTime(match.phaseT), false);
+    else hud.setTimer(fmtTime(match.roundTime), match.roundTime < 15);
+    hud.setCarrier(match.carrier === player && !match.bombPlanted);
+  } else if (mode === 'tdm' || mode === 'ffa') {
+    if (mode === 'tdm') {
+      hud.setLabels('JACKALS', 'WARDENS');
+      hud.setScores(match.scores[0], match.scores[1], 'TEAM DEATHMATCH · FIRST TO 30');
+    } else {
+      hud.setLabels('YOU', 'LEADER');
+      const leader = Math.max(0, ...actors.filter((a) => !a.isPlayer).map((a) => a.kills));
+      hud.setScores(player.kills, leader, 'FREE-FOR-ALL · FIRST TO 20');
+    }
+    hud.setTimer(fmtTime(match.matchTime), false);
+    hud.setCarrier(false);
+    if (!player.alive && match.phase === 'live') hud.showLoadout(pendingPrimary);
+    else hud.hideLoadout();
+  } else {
+    hud.setLabels('HITS', 'HEADSHOTS');
+    hud.setScores(range.hits, range.hs, 'PRACTICE RANGE');
+    hud.setTimer(fmtTime(match.matchTime), false);
+    hud.setCarrier(false);
+    hud.hideLoadout();
+  }
   document.getElementById('nades').innerHTML =
     `FRAG <b>${player.loadout.he ? '●' : '○'}</b> · FLASH <b>${player.loadout.flash ? '●' : '○'}</b>`;
   const spread = spreadRadians(def, Math.min(1, player.speed2d / def.speed), !player.onGround, player.crouch, player.scoped, player.bloom);
   const px = (Math.tan(spread) / Math.tan((camera.fov * Math.PI) / 360)) * (window.innerHeight / 2);
   hud.setSpread(Math.max(3, Math.min(46, px * 0.55)));
-  // Prompts.
+  // Prompts (defusal only — the other modes explain themselves on the score bar).
   let prompt = null;
-  if (player.alive && match.phase === 'freeze') prompt = 'Buy phase — press <kbd>B</kbd> to equip';
+  if (mode !== 'defusal') { /* no prompts */ }
+  else if (player.alive && match.phase === 'freeze') prompt = 'Buy phase — press <kbd>B</kbd> to equip';
   else if (player.alive && match.carrier === player && !match.bombPlanted && match.phase === 'live') {
     const inSite = map.sites.some((s) => Math.hypot(player.pos.x - s.x, player.pos.z - s.z) < s.r);
     prompt = inSite ? 'Hold <kbd>E</kbd> to plant the charge' : 'You have the charge — reach site A or B';
@@ -574,15 +808,17 @@ function syncHud() {
   hud.setScope(ads, def.optic, ads && def.zooms ? `${currentZoom(player, def)}×` : '');
 }
 
-// --- Camera and render ---------------------------------------------------------------
+// --- Camera and render ---
 function syncCamera(dt) {
   if (player.alive) {
     controller.eyePos(camera.position);
     camera.rotation.set(controller.viewPitch(), controller.viewYaw(), 0, 'YXZ');
     specActor = null;
   } else {
-    // Spectate the first living teammate from their eyes.
-    if (!specActor || !specActor.alive) specActor = actors.find((a) => a !== player && a.team === player.team && a.alive) || null;
+    // Spectate the first living teammate from their eyes (in the free-for-all, anyone).
+    if (!specActor || !specActor.alive) {
+      specActor = actors.find((a) => a !== player && a.alive && (a.team === player.team || match.mode === 'ffa')) || null;
+    }
     if (specActor) {
       camera.position.set(specActor.pos.x, specActor.pos.y + eyeHeight(specActor), specActor.pos.z);
       camera.rotation.set(specActor.pitch, specActor.yaw, 0, 'YXZ');
@@ -599,14 +835,13 @@ function syncCamera(dt) {
     camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 14);
     camera.updateProjectionMatrix();
   }
-  // Viewmodel life: kick, reload dip, bob, and a sway against look.
+  // Viewmodel life: kick, reload dip, bob.
   vmKick *= Math.max(0, 1 - dt * 11);
   vmReloadDip = Math.max(0, vmReloadDip - dt * 1.4);
   const bobY = Math.sin(controller.bobPhase * 2) * 0.008 * controller.bobAmount;
   viewmodel.position.set(0.235, -0.225 + bobY - vmReloadDip * 0.05, -0.48 + vmKick);
   viewmodel.rotation.x = vmKick * 1.4 - vmReloadDip * 0.5;
-  // Through a closed scope the gun is at the shoulder, out of the lens; a reflex sight
-  // is shot both-eyes-open, so its viewmodel stays.
+  // Through a closed scope the viewmodel hides; a reflex sight is shot both-eyes-open.
   viewmodel.visible = player.alive && !(player.scoped && heldDef.optic === 'scope');
 }
 
@@ -634,16 +869,23 @@ function frame(nowMs) {
     if (accumulator > FIXED_STEP * 5) accumulator = 0;
   }
   for (const a of actors) if (!a.isPlayer) poseActorModel(a, dt);
+  for (const t of range.targets) {
+    poseActorModel(t, dt);
+    // A hit rocks the dummy back on its stand; the pose resets rotation, so add after.
+    if (t.rockT > 0) {
+      t.rockT = Math.max(0, t.rockT - dt);
+      t.model.rotation.x -= Math.sin((t.rockT / 0.3) * Math.PI) * 0.16;
+    }
+  }
   syncCamera(dt);
   audio.setListener(player.pos.x, player.pos.z, controller.viewYaw());
   if (playing) syncHud();
   renderer.render(scene, camera);
 }
 
-// --- Staged screenshots ---------------------------------------------------------
-// ?shot=1..4 freezes one deterministic, photogenic frame: the sim never runs, actors are
-// placed and posed by hand, live effects are fired once, and the frame is painted twice
-// before window.__shotReady is set for the capture harness.
+// --- Staged screenshots ---
+// ?shot=1..4 freezes one deterministic frame: actors placed and posed by hand, live
+// effects fired once, painted twice before window.__shotReady is set.
 function faceToward(a, x, z) {
   a.yaw = Math.atan2(-(x - a.pos.x), -(z - a.pos.z));
   a.intent.faceYaw = a.yaw;
@@ -658,12 +900,11 @@ function place(a, x, z, tx, tz) {
 function stageShot(n) {
   hud.hideMenu();
   match.phase = 'live';
-  const [vex, onyx, rurik, sable] = [actors[5], actors[6], actors[7], actors[8]];
+  const [vex, onyx, rurik] = [actors[5], actors[6], actors[7]];
   const ally = actors[1];
 
   if (n === 1) {
-    // Through the Lance at 5x, down A-long: a Warden holds the furnace door in the
-    // reticle, the world outside the lens gone black.
+    // Through the Lance at 5x, down A-long: a Warden in the reticle, the world black.
     place(player, -27.5, 1.5, -18.6, -4.9);
     player.pitch = -0.02;
     player.loadout.primary = { id: 'lance', mag: 4, reserve: 25 };
@@ -678,9 +919,11 @@ function stageShot(n) {
     match.round = 4;
     match.roundTime = 72;
   } else if (n === 2) {
-    // A firefight in the rail yard, shot from the south-east corner: one Warden down on the
-    // site ring, one returning fire across the site, an ally beside the player shooting the
-    // same line, a fourth Warden holding the north side.
+    // A team deathmatch firefight in the rail yard, shot from the south-east corner:
+    // one Warden down on the site ring, one returning fire across the site, an ally
+    // beside the player shooting the same line, the kill race on the score bar.
+    match.mode = 'tdm';
+    match.matchTime = 203;
     place(player, 27.5, 8.5, 19, 17);
     player.pitch = -0.03;
     player.loadout.primary = { id: 'oxen', mag: 84, reserve: 200 };
@@ -697,9 +940,7 @@ function stageShot(n) {
     place(onyx, 16.5, 19.5, player.pos.x, player.pos.z);
     setModelGun(onyx, 'harrier');
     place(rurik, 24.8, 20.8, player.pos.x, player.pos.z);
-    match.scores = [3, 2];
-    match.round = 5;
-    match.roundTime = 54;
+    match.scores = [17, 12];
     hud.addKill('<span class="k0">You</span> ▸ MG-9 Oxen <span class="hs">HEADSHOT</span> ▸ <span class="k1">Koda</span>');
     hud.addKill('<span class="k0">Vex</span> ▸ BR-3 Jackdaw ▸ <span class="k1">Talon</span>');
     hud.hitmarker(false);
@@ -715,7 +956,6 @@ function stageShot(n) {
     const m3 = muzzlePos(ally, new THREE.Vector3());
     effects.tracer(m3.x, m3.y, m3.z, 17.2, 1.2, 19.0);
     effects.impact(17.2, 1.2, 19.0, 'dust');
-    void sable;
   } else if (n === 3) {
     // The buy menu over spawn, freeze time: a rifle and a vest already owned.
     match.phase = 'freeze';
@@ -731,22 +971,26 @@ function stageShot(n) {
     hud.showBuy();
     buyOpen = true;
   } else {
-    // Down A-long toward the furnace door, unscoped: a Warden steps out close in front of
-    // the player (near enough that the rounded kit reads), a second holds the door, an
-    // ally pushes the flank — the map read at a glance.
-    place(player, -27.5, 1.5, -19, -5);
-    player.pitch = -0.03;
-    player.loadout.primary = { id: 'harrier', mag: 25, reserve: 90 };
+    // The practice range from the firing line: dummies at 10, 25, 50 and 65 metres —
+    // the nearest flashing from a fresh hit, the 25 down, the tally on the HUD.
+    match.mode = 'range';
+    resetRange();
+    placePlayerAtLine();
+    player.loadout.primary = { id: 'harrier', mag: 27, reserve: 9999 };
     player.loadout.current = 'primary';
-    player.money = 3400;
-    place(ally, -23.8, -3.4, -19, -5);
-    setModelGun(ally, 'harrier');
-    place(vex, -25.2, -0.3, player.pos.x, player.pos.z);
-    setModelGun(vex, 'jackdaw');
-    place(onyx, -16.8, -11.5, -19, -6);
-    match.scores = [2, 1];
-    match.round = 4;
-    match.roundTime = 72;
+    player.loadout.he = 99;
+    player.loadout.flash = 99;
+    for (const bot of actors) if (!bot.isPlayer) bot.model.visible = false;
+    const [t10, t25] = range.targets;
+    t10.flashT = 0.18;
+    t10.rockT = 0.22;
+    t25.alive = false;
+    t25.health = 0;
+    t25.deathT = 0.7;
+    range.hits = 23;
+    range.hs = 7;
+    range.last = 'HIT 58 DMG · 25 M · TARGET DOWN';
+    hud.hitmarker(false);
   }
 
   if (player.scoped) {
@@ -755,6 +999,10 @@ function stageShot(n) {
   }
   showViewmodel(currentGun(player.loadout).held.id);
   for (const a of actors) if (!a.isPlayer) poseActorModel(a, 0.001);
+  for (const t of range.targets) {
+    poseActorModel(t, 0.001);
+    if (t.rockT > 0) t.model.rotation.x -= Math.sin((t.rockT / 0.3) * Math.PI) * 0.16;
+  }
   syncHud();
   let painted = 0;
   (function paint() {

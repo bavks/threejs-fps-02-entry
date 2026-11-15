@@ -1,8 +1,7 @@
-// Actors: every combatant — the player and the nine bots — is one of these. An actor owns
-// its physics body, health, loadout, score line and (for bots) a low-poly humanoid model in
-// team colours with a separate head, so a headshot is a place, not a dice roll. Locomotion
-// lives here too: the same accelerate/friction/crouch/jump step drives the player from input
-// and the bots from their steering, so both play by identical movement rules.
+// Actors: every combatant — the player and the nine bots — is one of these. An actor
+// owns its physics body, health, loadout, score line and (for bots) a humanoid model in
+// team colours with a separate head, so a headshot is a place, not a dice roll. The same
+// accelerate/friction/crouch/jump step drives the player and the bots alike.
 import * as THREE from 'three';
 import { PALETTE, TEAM_COLORS } from './palette.js';
 import { makeBox, moveBody, rayBox } from './physics.js';
@@ -35,8 +34,7 @@ export function eyeHeight(actor) {
   return actor.height - 0.16;
 }
 
-// The two hitboxes, rebuilt from the actor's current pose. Head is its own box above the
-// shoulders; crouching lowers both.
+// The two hitboxes, rebuilt from the actor's current pose; crouching lowers both.
 export function actorHitboxes(actor, out) {
   const top = actor.pos.y + actor.height;
   const headBase = actor.pos.y + actor.height * 0.76;
@@ -56,8 +54,7 @@ export function rayActor(ox, oy, oz, dx, dy, dz, actor) {
   return null;
 }
 
-// One fixed step of movement. wishX/wishZ is a normalised direction in world space;
-// speedMax already accounts for the held weapon and crouching.
+// One fixed step of movement; speedMax already accounts for the held weapon and crouch.
 export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, colliders) {
   const targetH = actor.crouch ? CROUCH_H : STAND_H;
   actor.height += (targetH - actor.height) * Math.min(1, dt * 12);
@@ -74,11 +71,11 @@ export function stepLocomotion(actor, wishX, wishZ, speedMax, wantJump, dt, coll
   actor.speed2d = Math.hypot(actor.vel.x, actor.vel.z);
 }
 
-// --- Bot models ---------------------------------------------------------------
+// --- Bot models ---
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a186, roughness: 0.8 });
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7, metalness: 0.3 });
 
-// One rounded part: capsule limbs, sphere joints and head, squashed-sphere torso and vest.
+// One rounded part: capsule limbs, sphere joints, squashed-sphere torso.
 function part(mat, geo, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1) {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
@@ -88,15 +85,11 @@ function part(mat, geo, x, y, z, rx = 0, sx = 1, sy = 1, sz = 1) {
   return m;
 }
 
-// A soldier, rounded: capsule legs that swing from the hip, a capsule torso under a rounded
-// vest, sphere shoulders and kneepads, and a sphere head with a visor band under a dome
-// helmet, gun carried in both hands at the aim pitch. Every pose anchor (hip pivots, arm
-// pivot) and overall dimension matches the boxy original, and the silhouette still fills
-// the hitboxes — which are computed from the actor, never from this model. One anchor did
-// move: the gun mount used to sit at y 1.32 inside the arm pivot (y 1.34), floating the gun
-// a metre over the helmet; it now sits at the arm's end, in the hands, as the pose code
-// always described. Presentation only — shot rays still start at the eye. Built once per
-// bot and posed every frame.
+// A soldier, rounded: capsule legs swinging from the hip, a capsule torso under a
+// rounded vest, sphere shoulders and kneepads, a sphere head with a visor band under a
+// dome helmet, gun carried in both hands at the aim pitch. Pose anchors and dimensions
+// match the hitboxes, which are computed from the actor, never from this model. The gun
+// mount sits at the arm's end, in the hands; shot rays still start at the eye.
 export function buildActorModel(actor) {
   const teamMat = new THREE.MeshStandardMaterial({ color: TEAM_COLORS[actor.team], roughness: 0.75 });
   const teamDark = new THREE.MeshStandardMaterial({ color: actor.team === 0 ? PALETTE.jackalDark : PALETTE.wardenDark, roughness: 0.8 });
@@ -144,8 +137,7 @@ export function setModelGun(actor, weaponId) {
   mount.add(gun);
 }
 
-// Pose the model from the actor's state: position, facing, walk swing, aim pitch, hit flash,
-// and the fall when dead. Called in the render step, never in the fixed simulation.
+// Pose the model from the actor's state. Render step only, never in the simulation.
 export function poseActorModel(actor, dt) {
   const g = actor.model;
   if (!g) return;

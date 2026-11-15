@@ -1,9 +1,8 @@
 // Bot brains. A brain writes intent onto its actor — move direction, aim, fire, crouch,
-// channel — and the shared actuation in main.js carries it out, exactly as the player's
-// controller does from input. Brains think in staggered ticks: perceive (vision cones and
-// line of sight, hearing recent gunfire), then act on a small state machine — advance along
-// the waypoint graph, hold a node and watch its lane, engage with burst discipline, plant or
-// defuse when the round asks for it, and rotate when the bomb goes down.
+// channel — and the shared actuation in main.js carries it out, as the player's controller
+// does from input. Brains think in staggered ticks: perceive (vision cones, line of sight,
+// hearing), then act: advance the waypoint graph, hold a node, engage with burst
+// discipline, plant or defuse when the round asks, rotate when the bomb goes down.
 import { lineOfSight } from './physics.js';
 import { eyeHeight } from './actors.js';
 import { WEAPONS } from './weapons.js';
@@ -55,7 +54,7 @@ function perceive(brain, world, now) {
   const fz = -Math.cos(a.yaw);
   let bestD = Infinity;
   for (const e of world.actors) {
-    if (!e.alive || e.team === a.team) continue;
+    if (!e.alive || !world.hostile(a, e)) continue;
     const dx = e.pos.x - a.pos.x;
     const dz = e.pos.z - a.pos.z;
     const dist = Math.hypot(dx, dz);
@@ -70,14 +69,14 @@ function perceive(brain, world, now) {
     brain.lastSeen.z = e.pos.z;
     brain.lastSeenT = now;
   }
-  // Hearing: a recent shot near enough pulls a holding or advancing bot to look.
+  // Hearing: a recent shot nearby pulls a holding or advancing bot to look.
   if (!brain.seen) {
     for (let i = world.noise.length - 1; i >= 0; i--) {
       const n = world.noise[i];
       if (now - n.t > 1.6) break;
-      if (n.team === a.team) continue;
+      if (n.team === a.team && !world.ffa) continue;
       const d = Math.hypot(n.x - a.pos.x, n.z - a.pos.z);
-      if (d < HEAR_DIST) {
+      if (d > 2 && d < HEAR_DIST) {
         brain.investigate = { x: n.x, z: n.z };
         brain.lastSeen.x = n.x;
         brain.lastSeen.z = n.z;
@@ -87,7 +86,7 @@ function perceive(brain, world, now) {
   }
 }
 
-// Steer toward a world point; returns true on arrival. Writes move intent and facing.
+// Steer toward a world point; returns true on arrival.
 function steer(brain, world, tx, tz, dt, arriveR = 0.8) {
   const a = brain.actor;
   const dx = tx - a.pos.x;
@@ -128,7 +127,7 @@ function followPath(brain, world, dt) {
   return false;
 }
 
-// Aim with human error: the error cone widens with range and target speed, narrows with skill.
+// Aim with human error: the cone widens with range and target speed.
 function aimError(brain, target, dist) {
   const base = 1.5 + dist * 0.028 + Math.min(1.2, target.speed2d * 0.22);
   return ((base / brain.skill) * Math.PI) / 180;
@@ -182,7 +181,7 @@ export function stepBot(brain, world, now, dt) {
     return;
   }
 
-  // --- Planter -----------------------------------------------------------------
+  // --- Planter ---
   if (brain.plan && brain.plan.planter && a.team === 0 && round.phase === 'live') {
     brain.goalNode = world.siteNodeOf(brain.plan.site);
     const site = world.siteOf(brain.plan.site);
@@ -199,7 +198,7 @@ export function stepBot(brain, world, now, dt) {
     return;
   }
 
-  // --- Engage ------------------------------------------------------------------
+  // --- Engage ---
   if (fresh) { engage(brain, world, now, dt); return; }
   if (brain.seen === null && now - brain.lastSeenT < 1.4 && brain.lastSeenT > 0) {
     // Lost them a moment ago: push the last known position.
@@ -207,7 +206,15 @@ export function stepBot(brain, world, now, dt) {
     return;
   }
 
-  // --- Plan movement -------------------------------------------------------------
+  // --- Deathmatch hunt ---
+  // No bomb, no plan: walk the graph from node to node until somebody shows up.
+  if (brain.plan && brain.plan.type === 'hunt') {
+    brain.goalNode = brain.plan.node;
+    if (followPath(brain, world, dt)) brain.plan.node = Math.floor(brain.random() * world.map.nodes.length);
+    return;
+  }
+
+  // --- Plan movement ---
   if (brain.plan && brain.plan.type === 'defend') {
     brain.goalNode = brain.plan.holdNode;
     if (followPath(brain, world, dt)) {
@@ -228,7 +235,7 @@ export function stepBot(brain, world, now, dt) {
   intent.moveZ = 0;
 }
 
-// Stand at a node and watch its lane, sweeping slowly; face snaps to a heard threat.
+// Stand at a node and watch its lane; face snaps to a heard threat.
 function holdStance(brain, world, now) {
   const a = brain.actor;
   a.intent.moveX = 0;
@@ -283,9 +290,8 @@ function engage(brain, world, now, dt) {
   intent.crouch = brain.strafeT < 0.25 && dist < 20;
 }
 
-// What a bot buys at the freeze, by its purse. The priciest primary it can afford, with a
-// lean toward the runner-up now and then so the field is not nine copies of one gun; a
-// Magpie when the purse stays fat; then armour, then grenades, like a player would.
+// What a bot buys at the freeze, by its purse: the priciest primary it can afford (with
+// a lean to the runner-up, so the field varies), then armour, then grenades.
 export function botBuy(actor, random) {
   const lo = actor.loadout;
   if (!lo.primary) {
@@ -315,4 +321,17 @@ export function botBuy(actor, random) {
 
 function freshGun(id) {
   return { id, mag: WEAPONS[id].mag, reserve: WEAPONS[id].reserve };
+}
+
+// Deathmatch kit: no purse, just a pick. The ladder leans to the middle — rifles and
+// SMGs with the odd cannon — plus a coin-flip on armour and grenades.
+export function freePick(actor, random) {
+  const lo = actor.loadout;
+  const ladder = ['boar', 'krait', 'krait', 'jackdaw', 'jackdaw', 'harrier', 'harrier', 'harrier', 'heron', 'oxen', 'lance'];
+  lo.primary = freshGun(ladder[Math.floor(random() * ladder.length)]);
+  lo.sidearm = freshGun(random() < 0.3 ? 'magpie' : 'wren');
+  lo.armor = random() < 0.5 ? 2 : 1;
+  lo.he = random() < 0.4 ? 1 : 0;
+  lo.flash = random() < 0.3 ? 1 : 0;
+  lo.current = 'primary';
 }

@@ -1,7 +1,7 @@
 // The HUD: every DOM element the game talks to. It renders state pushed in by main.js —
-// health, armour, ammo, money, the round clock, the score, the killfeed, banners, the
-// plant/defuse channel bar, the buy menu, the scoreboard and the menu/pause/match screens.
-// It owns no game state; callbacks out (play, buy, resume, restart) are assigned by main.js.
+// health, ammo, money, the clock, the score, the killfeed, banners, the channel bar, the
+// buy menu, the scoreboard and the menu/pause/match screens. It owns no game state;
+// callbacks out (play, buy, resume, restart, pick, menu) are assigned by main.js.
 import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 
 const $ = (id) => document.getElementById(id);
@@ -40,12 +40,13 @@ export function createHud() {
     menu: $('menu'), buy: $('buy'), buyGrid: $('buy-grid'), buyMoney: $('buy-money'), buyNote: $('buy-note'),
     pause: $('pause'), over: $('matchover'), overTitle: $('over-title'), overSub: $('over-sub'),
     board: $('scoreboard'), boardWrap: $('board-wrap'), carrierTag: $('carrier-tag'),
+    label0: $('label-0'), label1: $('label-1'), loadout: $('loadout'), rangeInfo: $('range-info'),
   };
   let bannerTimer = 0;
 
   const hud = {
     els,
-    onPlay: null, onBuy: null, onResume: null, onRestart: null,
+    onPlay: null, onBuy: null, onResume: null, onRestart: null, onPickGun: null, onMenu: null,
 
     setHealth(hp, armorTier) {
       els.healthFill.style.width = Math.max(0, hp) + '%';
@@ -69,6 +70,33 @@ export function createHud() {
       els.score1.textContent = s1;
       els.roundLabel.textContent = roundText;
     },
+    // The score bar's two names follow the mode.
+    setLabels(a, b) {
+      if (els.label0.textContent !== a) els.label0.textContent = a;
+      if (els.label1.textContent !== b) els.label1.textContent = b;
+    },
+    showMoney(on) { els.money.style.display = on ? '' : 'none'; },
+    setRange(text) {
+      if (text) { els.rangeInfo.textContent = text; els.rangeInfo.classList.add('show'); }
+      else els.rangeInfo.classList.remove('show');
+    },
+    // The deathmatch spawn bar: one button per primary, the pick lit. Built once.
+    buildLoadout(items) {
+      els.loadout.innerHTML = '';
+      for (const { id, key } of items) {
+        const btn = document.createElement('button');
+        btn.className = 'load-item';
+        btn.dataset.id = id;
+        btn.innerHTML = `<span class="buy-key">${key}</span>${WEAPONS[id].name}`;
+        btn.addEventListener('click', () => { if (hud.onPickGun) hud.onPickGun(id); });
+        els.loadout.appendChild(btn);
+      }
+    },
+    showLoadout(selId) {
+      els.loadout.classList.add('show');
+      for (const btn of els.loadout.children) btn.classList.toggle('sel', btn.dataset.id === selId);
+    },
+    hideLoadout() { els.loadout.classList.remove('show'); },
     setSpread(px) { els.crosshair.style.setProperty('--gap', px.toFixed(0) + 'px'); },
     hitmarker(kill) {
       els.hitmarker.classList.toggle('kill', !!kill);
@@ -120,8 +148,7 @@ export function createHud() {
       clearTimeout(hud._hdT);
       hud._hdT = setTimeout(() => els.hitdir.classList.remove('show'), 700);
     },
-    // ADS state: a closed scope draws its lens and mil-dot reticle, a reflex sight its
-    // open window and dot; either way the hip crosshair gives the centre over.
+    // ADS state: a closed scope draws its lens and reticle, a reflex sight its dot.
     setScope(on, optic, label) {
       els.scope.classList.toggle('show', !!on);
       els.scope.classList.toggle('dot', optic === 'dot');
@@ -190,10 +217,14 @@ export function createHud() {
     hideBoard() { els.board.classList.remove('show'); },
   };
 
-  $('play').addEventListener('click', () => { if (hud.onPlay) hud.onPlay(); });
+  for (const btn of document.querySelectorAll('[data-mode]')) {
+    btn.addEventListener('click', () => { if (hud.onPlay) hud.onPlay(btn.dataset.mode); });
+  }
   $('resume').addEventListener('click', () => { if (hud.onResume) hud.onResume(); });
   $('restart').addEventListener('click', () => { if (hud.onRestart) hud.onRestart(); });
   $('again').addEventListener('click', () => { if (hud.onRestart) hud.onRestart(); });
+  $('tomenu').addEventListener('click', () => { if (hud.onMenu) hud.onMenu(); });
+  $('pausemenu').addEventListener('click', () => { if (hud.onMenu) hud.onMenu(); });
   hud.buildBuy();
   return hud;
 }

@@ -1,8 +1,7 @@
-// Rounds: the matches. One state machine owns the phase, the clocks, the bomb, the
-// economies and the scores for every mode — defusal's rounds, the deathmatches' respawns
-// and win lines, the range's quiet live phase. It never touches the DOM or three.js: it
-// pushes events onto a queue main.js drains into the HUD, audio and effects, and reads
-// intent the player controller and bot brains write onto each actor.
+// Rounds: the matches. One state machine owns the phase, clocks, bomb, economies
+// and scores for every mode. It never touches the DOM or three.js: it pushes events
+// onto a queue main.js drains into the HUD, audio and effects, and reads the intent
+// the player controller and bot brains write onto each actor.
 import { WEAPONS, GRENADES, ARMOR, createLoadout } from './weapons.js';
 import { HOLD_NODES, SITE_NODES, SITES, SPAWNS } from './map.js';
 

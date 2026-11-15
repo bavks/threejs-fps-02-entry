@@ -1,8 +1,7 @@
-// Bot brains. A brain writes intent onto its actor — move direction, aim, fire, crouch,
-// channel — and the shared actuation in main.js carries it out, as the player's controller
-// does from input. Brains think in staggered ticks: perceive (vision cones, line of sight,
-// hearing), then act: advance the waypoint graph, hold a node, engage with burst
-// discipline, plant or defuse when the round asks, rotate when the bomb goes down.
+// Bot brains. A brain writes intent onto its actor — move, aim, fire, crouch,
+// channel — and main.js actuates it, as the player's controller does from input.
+// In staggered ticks brains perceive (vision cones, line of sight, hearing), then
+// act: advance the waypoint graph, hold, engage, plant/defuse, rotate.
 import { lineOfSight } from './physics.js';
 import { eyeHeight } from './actors.js';
 import { WEAPONS } from './weapons.js';

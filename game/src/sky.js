@@ -1,16 +1,13 @@
-// Sky: Blue Sky, Cloudy, Sunset, Night — one mood; K cycles it.
 import * as THREE from 'three';
 
-// [top,hor,fog,near,far,sun,sunI,pos,hSky,hGnd,hemiI,fillI,lamp,exp,glow]
 const SKIES = [
   [0x527a9e,0xa9c3d8,0x9db2c2,34,115,0xffd9a3,2.7,[34,42,-20],0xbcd3e6,0x5a5040,1.1,0.5,1,1.22,0.55],
   [0x66727c,0xb4babd,0xa3adb2,24,82,0xe9e5db,1.0,[16,40,16],0xc3ccd2,0x5c574e,1.3,0.6,1.35,1.1,0.1],
   [0x2e3a5c,0xf07f3c,0xcf9464,30,105,0xff8f3d,2.4,[-40,8,-14],0x9a7d8f,0x54432e,0.7,0.28,1.7,1.15,1.1],
   [0x050a18,0x1a2a44,0x111c2c,26,92,0xbcd2ff,0.6,[-18,44,20],0x2e4a73,0x141a20,0.6,0.2,3.2,1.06,0.5],
 ];
-export const SKY_NAMES = ['Blue Sky', 'Cloudy', 'Sunset', 'Night'];
-const COLS = ['top', 'hor', 'fog', 'sun', 'hSky', 'hGnd'];
-const NUMS = ['near', 'far', 'sunI', 'hemiI', 'fillI', 'lamp', 'exp', 'glow'];
+const COLS = ['top','hor','fog','sun','hSky','hGnd'];
+const NUMS = ['near','far','sunI','hemiI','fillI','lamp','exp','glow'];
 
 function decode(p) {
   return {
@@ -85,8 +82,6 @@ export function createSky(scene, lights, renderer) {
   apply(cur);
 
   return {
-    get index() { return idx; },
-    name() { return SKY_NAMES[idx]; },
     set(i, instant = false) {
       idx = ((i % SKIES.length) + SKIES.length) % SKIES.length;
       from = clone(cur);

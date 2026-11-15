@@ -1,4 +1,3 @@
-// Procedural canvas textures, painted at boot.
 import * as THREE from 'three';
 
 function canvas(w, h) {
@@ -38,7 +37,7 @@ export function groundTexture(random) {
   const px = (x) => ((x + 34) / 68) * W;
   const pz = (z) => ((z + 26) / 52) * H;
   const m = W / 68;
-  noise(ctx, W, H, '#55534e', ['#4a4844', '#605e57', '#6b675e', '#3f3e3a'], 5200, random);
+  noise(ctx, W, H, '#55534e', ['#4a4844','#605e57','#6b675e','#3f3e3a'], 5200, random);
   ctx.fillStyle = '#615d54';
   ctx.globalAlpha = 0.55;
   ctx.fillRect(px(-34), pz(-26), 24 * m, 20 * m);
@@ -83,8 +82,8 @@ export function groundTexture(random) {
     ctx.fillText(letter, px(x), pz(z) + 0.1 * m);
     ctx.globalAlpha = 1;
   };
-  site(-19, -13.5, '#c65a2e', 'A');
-  site(21, 16, '#2e7f86', 'B');
+  site(-19, -13.5, '#c65a2e','A');
+  site(21, 16, '#2e7f86','B');
   ctx.fillStyle = 'rgba(230,225,210,0.28)';
   const arrow = (x, z, rot) => {
     ctx.save();
@@ -103,7 +102,7 @@ export function groundTexture(random) {
 
 export function sidingTexture(random, base = '#6d7276', rib = '#5b6064') {
   const [c, ctx] = canvas(256, 256);
-  noise(ctx, 256, 256, base, [rib, '#7a7f83', '#54575a'], 500, random);
+  noise(ctx, 256, 256, base, [rib, '#7a7f83','#54575a'], 500, random);
   ctx.fillStyle = rib;
   for (let x = 0; x < 256; x += 32) ctx.fillRect(x, 0, 5, 256);
   ctx.fillStyle = 'rgba(30,26,22,0.35)';
@@ -113,7 +112,7 @@ export function sidingTexture(random, base = '#6d7276', rib = '#5b6064') {
 
 export function concreteTexture(random) {
   const [c, ctx] = canvas(256, 256);
-  noise(ctx, 256, 256, '#8d8578', ['#7c766a', '#9c9587', '#6e685c'], 900, random);
+  noise(ctx, 256, 256, '#8d8578', ['#7c766a','#9c9587','#6e685c'], 900, random);
   ctx.strokeStyle = 'rgba(40,38,34,0.25)';
   for (let i = 0; i < 7; i++) {
     ctx.beginPath();
@@ -127,7 +126,7 @@ export function concreteTexture(random) {
 
 export function crateTexture(random) {
   const [c, ctx] = canvas(128, 128);
-  noise(ctx, 128, 128, '#9a7d4f', ['#8a6f42', '#a98c58', '#77592f'], 260, random);
+  noise(ctx, 128, 128, '#9a7d4f', ['#8a6f42','#a98c58','#77592f'], 260, random);
   ctx.strokeStyle = '#5e472a';
   ctx.lineWidth = 9;
   ctx.strokeRect(4, 4, 120, 120);

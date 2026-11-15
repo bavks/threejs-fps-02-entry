@@ -1,4 +1,3 @@
-// IRONFALL — boot and the one loop: a fixed 60 Hz sim.
 import * as THREE from 'three';
 import { PALETTE, TEAM_NAMES } from './palette.js';
 import { mulberry32 } from './rng.js';
@@ -40,11 +39,12 @@ scene.add(camera);
 const map = createMap(scene, random);
 const sky = createSky(scene, map.sky, renderer);
 const hud = createHud();
+hud.buildMinimap(map.colliders, map.sites);
 const audio = createAudio();
 const effects = createEffects(scene, glowTexture());
 const bombProp = createBombProp(scene);
 
-const BOT_NAMES = ['Vex', 'Onyx', 'Rurik', 'Sable', 'Koda', 'Miro', 'Talon', 'Ash', 'Reyes'];
+const BOT_NAMES = ['Vex','Onyx','Rurik','Sable','Koda','Miro','Talon','Ash','Reyes'];
 const player = createActor(0, 'You', true);
 const actors = [player];
 const brains = new Map();
@@ -163,7 +163,7 @@ function stepRange(dt) {
   }
 }
 
-const RANGE_GUNS = ['wren', 'magpie', 'boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
+const RANGE_GUNS = ['wren','magpie','boar','krait','jackdaw','harrier','heron','oxen','lance'];
 function grantRangeGun(id) {
   const lo = player.loadout;
   const slot = WEAPONS[id].slot;
@@ -211,10 +211,9 @@ function applyDamage(target, amount, attacker, part) {
   if (target.health <= 0) killActor(target, attacker, part === 'head');
 }
 
-// Kill callouts: player streaks and first blood pick the banner.
 const streaks = { kills: 0, hs: 0, blood: false };
-const STREAK_NAMES = ['', '', 'DOUBLE KILL', 'TRIPLE KILL', 'CHAIN KILLER', 'RAMPAGE', 'MASSACRE', 'UNSTOPPABLE'];
-const CHAIN_NAMES = ['', '', 'CHAIN HEADSHOT', 'HEADSHOT RAMPAGE', 'DEADEYE'];
+const STREAK_NAMES = ['','','DOUBLE KILL','TRIPLE KILL','CHAIN KILLER','RAMPAGE','MASSACRE','UNSTOPPABLE'];
+const CHAIN_NAMES = ['','','CHAIN HEADSHOT','HEADSHOT RAMPAGE','DEADEYE'];
 function resetStreaks() { streaks.kills = 0; streaks.hs = 0; streaks.blood = false; }
 function playerCallout(headshot, blood) {
   streaks.kills += 1;
@@ -230,6 +229,7 @@ function killActor(victim, attacker, headshot) {
   victim.alive = false;
   victim.health = 0;
   match.onKill(attacker, victim);
+  syncMoney();
   const wName = attacker ? currentGun(attacker.loadout).def.name : 'Charge';
   const kName = attacker ? attacker.name : '—';
   const kc = attacker ? `k${attacker.team}` : '';
@@ -438,11 +438,11 @@ function onGrenade(g) {
 }
 
 let simNow = 0;
-let skyClock = 0; // sky auto-cycle clock
+let skyClock = 0;
 let playing = false;
 let buyOpen = false;
 let specActor = null;
-let pendingPrimary = 'harrier'; // deathmatch spawn pick
+let pendingPrimary = 'harrier';
 
 function actuateBot(actor, dt) {
   const brain = actor.brain;
@@ -508,7 +508,7 @@ function bannerForRound() {
   const atk = player.team === 0;
   hud.banner(
     `ROUND ${match.round}`,
-    atk ? 'Jackals attack — plant the charge or wipe the Wardens' : 'Wardens defend — hold the sites, defuse the charge',
+    atk ? 'Jackals attack — plant the charge' : 'Wardens defend — hold the sites',
     2400,
   );
 }
@@ -529,7 +529,7 @@ function drainEvents() {
         player.loadout.he = 99; player.loadout.flash = 99; player.loadout.armor = 0;
         player.loadout.sidearm.reserve = 9999;
         grantRangeGun('harrier');
-        hud.banner('PRACTICE RANGE', 'Targets at 10 · 25 · 50 · 65 m — keys 1–9 switch guns, all free', 3200);
+        hud.banner('PRACTICE RANGE','Targets at 10–65 m — keys 1–9 switch guns, all free', 3200);
       } else {
         for (const bot of actors) {
           if (bot.isPlayer) continue;
@@ -545,7 +545,7 @@ function drainEvents() {
         showViewmodel('harrier');
         hud.banner(
           ev.mode === 'tdm' ? 'TEAM DEATHMATCH' : 'FREE-FOR-ALL',
-          ev.mode === 'tdm' ? 'First squad to 30 kills — pick your next gun while you are down' : 'Every fighter for themselves — first to 20 kills',
+          ev.mode === 'tdm' ? 'First squad to 30 kills' : 'Every fighter for themselves — first to 20 kills',
           3200,
         );
       }
@@ -582,9 +582,10 @@ function drainEvents() {
       showViewmodel(currentGun(player.loadout).held.id);
       bannerForRound();
     } else if (ev.type === 'go') {
-      hud.banner('GO', '', 700);
+      hud.banner('GO','', 700);
     } else if (ev.type === 'halftime') {
-      hud.banner('HALF TIME', 'Squads swap sides — purses and loadouts reset', 3200);
+      resetMoney();
+      hud.banner('HALF TIME','Squads swap sides — purses and loadouts reset', 3200);
       for (const bot of actors) {
         if (bot.isPlayer) continue;
         scene.remove(bot.model);
@@ -593,6 +594,7 @@ function drainEvents() {
         setModelGun(bot, currentGun(bot.loadout).held.id);
       }
     } else if (ev.type === 'planted') {
+      syncMoney();
       hud.setBomb(ev.site);
       bombProp.show(ev.x, ev.z);
       hud.banner('CHARGE PLANTED', `Site ${ev.site} — ${TEAM_NAMES[1]} must defuse`, 2400);
@@ -608,6 +610,7 @@ function drainEvents() {
       }
       shake = 0.7;
     } else if (ev.type === 'roundEnd') {
+      syncMoney();
       hud.setBomb(null);
       bombProp.hide();
       const won = ev.winner === player.team;
@@ -646,6 +649,7 @@ hud.onPlay = (mode) => {
   hud.hideOver();
   resetStreaks();
   match.startMode(mode || 'defusal');
+  resetMoney();
   playing = true;
   input.requestLock();
 };
@@ -655,6 +659,7 @@ hud.onRestart = () => {
   hud.hideOver();
   resetStreaks();
   match.startMode(match.mode);
+  resetMoney();
   playing = true;
   input.requestLock();
 };
@@ -663,11 +668,12 @@ hud.onMenu = () => {
   hud.hideOver();
   hud.hideLoadout();
   hud.setRange(null);
+  hud.showMinimap(false);
   hud.showMenu();
   playing = false;
 };
 hud.onPickGun = (id) => { pendingPrimary = id; };
-hud.buildLoadout(['boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'].map((id, i) => ({ id, key: String(i + 1) })));
+hud.buildLoadout(['boar','krait','jackdaw','harrier','heron','oxen','lance'].map((id, i) => ({ id, key: String(i + 1) })));
 hud.onBuy = (item) => {
   const err = match.tryBuy(player, item);
   if (err) { audio.denied(); hud.els.buyNote.textContent = err; }
@@ -675,6 +681,7 @@ hud.onBuy = (item) => {
     audio.buy();
     showViewmodel(currentGun(player.loadout).held.id);
     hud.refreshBuy(player, match.canBuy(player));
+    syncMoney();
   }
 };
 
@@ -716,7 +723,7 @@ function handleKeys() {
       if (input.wasPressed(`Digit${i + 1}`)) grantRangeGun(RANGE_GUNS[i]);
     }
   } else if (!player.alive && match.mode !== 'defusal') {
-    const picks = ['boar', 'krait', 'jackdaw', 'harrier', 'heron', 'oxen', 'lance'];
+    const picks = ['boar','krait','jackdaw','harrier','heron','oxen','lance'];
     for (let i = 0; i < picks.length; i++) {
       if (input.wasPressed(`Digit${i + 1}`)) pendingPrimary = picks[i];
     }
@@ -758,15 +765,29 @@ function handleKeys() {
 
 const fmtTime = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
+let moneySeen = null;
+function syncMoney() {
+  if (player.money === moneySeen) return;
+  const d = moneySeen === null ? 0 : player.money - moneySeen;
+  moneySeen = player.money;
+  hud.setMoney(player.money);
+  if (d && match.mode === 'defusal') hud.moneyPop(d);
+}
+function resetMoney() { moneySeen = null; syncMoney(); }
+
 function syncHud() {
   const { held, def } = currentGun(player.loadout);
   hud.setHealth(player.health, player.loadout.armor);
   hud.setAmmo(player.reloading ? '—' : held.mag, held.reserve, def.name.toUpperCase());
   const mode = match.mode;
   hud.showMoney(mode === 'defusal');
-  hud.setRange(mode === 'range' ? (range.last || 'TARGETS AT 10 · 25 · 50 · 65 M — KEYS 1–9 SWITCH GUNS') : null);
+  syncMoney();
+  hud.showMinimap(true);
+  const rg = mode === 'range';
+  hud.drawMinimap(player, rg ? [] : actors, rg ? range.targets : null, controller.viewYaw(), mode === 'ffa');
+  hud.setRange(mode === 'range' ? (range.last || 'TARGETS AT 10–65 M — KEYS 1–9 SWITCH GUNS') : null);
   if (mode === 'defusal') {
-    hud.setLabels('JACKALS', 'WARDENS');
+    hud.setLabels('JACKALS','WARDENS');
     hud.hideLoadout();
     hud.setScores(match.scores[0], match.scores[1], match.phase === 'matchover' ? 'FULL TIME' : `ROUND ${match.round} / 17`);
     if (match.bombPlanted) hud.setTimer(fmtTime(match.bombTimer), match.bombTimer < 10);
@@ -775,10 +796,10 @@ function syncHud() {
     hud.setCarrier(match.carrier === player && !match.bombPlanted);
   } else if (mode === 'tdm' || mode === 'ffa') {
     if (mode === 'tdm') {
-      hud.setLabels('JACKALS', 'WARDENS');
+      hud.setLabels('JACKALS','WARDENS');
       hud.setScores(match.scores[0], match.scores[1], 'TEAM DEATHMATCH · FIRST TO 30');
     } else {
-      hud.setLabels('YOU', 'LEADER');
+      hud.setLabels('YOU','LEADER');
       const leader = Math.max(0, ...actors.filter((a) => !a.isPlayer).map((a) => a.kills));
       hud.setScores(player.kills, leader, 'FREE-FOR-ALL · FIRST TO 20');
     }
@@ -787,7 +808,7 @@ function syncHud() {
     if (!player.alive && match.phase === 'live') hud.showLoadout(pendingPrimary);
     else hud.hideLoadout();
   } else {
-    hud.setLabels('HITS', 'HEADSHOTS');
+    hud.setLabels('HITS','HEADSHOTS');
     hud.setScores(range.hits, range.hs, 'PRACTICE RANGE');
     hud.setTimer(fmtTime(match.matchTime), false);
     hud.setCarrier(false);
@@ -945,7 +966,7 @@ function stageShot(n) {
   } else if (n === 2) {
     match.mode = 'tdm';
     match.matchTime = 203;
-    sky.set(0, true); // blue sky
+    sky.set(0, true);
     place(player, 0, 17.5, 3, 25);
     player.pitch = -0.03;
     player.loadout.primary = { id: 'oxen', mag: 84, reserve: 200 };
@@ -982,7 +1003,7 @@ function stageShot(n) {
   } else if (n === 3) {
     match.phase = 'freeze';
     match.phaseT = 5;
-    sky.set(3, true); // night
+    sky.set(3, true);
     place(player, -26, 20, -6, 0);
     player.loadout.primary = { id: 'harrier', mag: 30, reserve: 120 };
     player.loadout.current = 'primary';

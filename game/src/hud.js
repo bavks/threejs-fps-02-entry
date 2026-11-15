@@ -1,21 +1,11 @@
-// The HUD: every DOM element the game talks to.
 import { WEAPONS, GRENADES, ARMOR } from './weapons.js';
 
 const $ = (id) => document.getElementById(id);
 
 export const BUY_ITEMS = [
-  { item:'magpie',key:'1',code:'Digit1' },
-  { item:'boar',key:'2',code:'Digit2' },
-  { item:'krait',key:'3',code:'Digit3' },
-  { item:'jackdaw',key:'4',code:'Digit4' },
-  { item:'harrier',key:'5',code:'Digit5' },
-  { item:'heron',key:'6',code:'Digit6' },
-  { item:'oxen',key:'7',code:'Digit7' },
-  { item:'lance',key:'8',code:'Digit8' },
-  { item:'armor1',key:'9',code:'Digit9' },
-  { item:'armor2',key:'0',code:'Digit0' },
-  { item:'he',key:'-',code:'Minus' },
-  { item:'flash',key:'=',code:'Equal' },
+  { item:'magpie',key:'1',code:'Digit1' },{ item:'boar',key:'2',code:'Digit2' },{ item:'krait',key:'3',code:'Digit3' },{ item:'jackdaw',key:'4',code:'Digit4' },
+  { item:'harrier',key:'5',code:'Digit5' },{ item:'heron',key:'6',code:'Digit6' },{ item:'oxen',key:'7',code:'Digit7' },{ item:'lance',key:'8',code:'Digit8' },
+  { item:'armor1',key:'9',code:'Digit9' },{ item:'armor2',key:'0',code:'Digit0' },{ item:'he',key:'-',code:'Minus' },{ item:'flash',key:'=',code:'Equal' },
 ];
 
 export function itemInfo(item) {
@@ -29,7 +19,7 @@ export function createHud() {
   const els = {
     hud: $('hud'), healthFill: $('health-fill'), healthNum: $('health-num'), armorNum: $('armor-num'),
     ammoMag: $('ammo-mag'), ammoReserve: $('ammo-reserve'), ammoName: $('ammo-name'), ammo: $('ammo'),
-    money: $('money'), timer: $('timer'), score0: $('score-0'), score1: $('score-1'), roundLabel: $('round-label'),
+    money: $('money'), moneyPop: $('money-pop'), minimap: $('minimap'), timer: $('timer'), score0: $('score-0'), score1: $('score-1'), roundLabel: $('round-label'),
     killfeed: $('killfeed'), banner: $('banner'), bannerTitle: $('banner-title'), bannerSub: $('banner-sub'),
     callout: $('callout'), calloutTitle: $('callout-title'), calloutSub: $('callout-sub'),
     prompt: $('prompt'), channelWrap: $('channel'), channelFill: $('channel-fill'), channelLabel: $('channel-label'),
@@ -42,6 +32,11 @@ export function createHud() {
   };
   let bannerTimer = 0;
   let calloutTimer = 0;
+  let mmBase = null;
+  let mmCtx = null;
+  const mmX = (x) => 1.5 + (x + 34.6) * 2.5;
+  const mmY = (z) => 0.5 + (z + 26.6) * 2.5;
+  const TEAMCOL = ['#eda273','#7fc6cc'];
 
   const hud = {
     els,
@@ -60,6 +55,54 @@ export function createHud() {
       els.ammo.classList.toggle('empty', mag === 0);
     },
     setMoney(n) { els.money.textContent = '$' + n.toLocaleString('en-US'); },
+    moneyPop(d) {
+      const div = document.createElement('div');
+      div.className = 'pop' + (d < 0 ? ' neg' : '');
+      div.textContent = (d > 0 ? '+$' : '-$') + Math.abs(d).toLocaleString('en-US');
+      els.moneyPop.appendChild(div);
+      while (els.moneyPop.children.length > 3) els.moneyPop.firstChild.remove();
+      setTimeout(() => div.remove(), 1450);
+    },
+    buildMinimap(colliders, sites) {
+      mmBase = document.createElement('canvas');
+      mmBase.width = 352; mmBase.height = 268;
+      const c = mmBase.getContext('2d');
+      c.scale(2, 2);
+      c.fillStyle = 'rgba(13,15,19,0.85)';
+      c.fillRect(0, 0, 176, 134);
+      for (const b of colliders) {
+        if (b.maxY < 0.45) continue;
+        c.fillStyle = b.maxY >= 3.4 ? 'rgba(206,214,223,0.62)' : 'rgba(158,168,180,0.4)';
+        c.fillRect(mmX(b.minX), mmY(b.minZ), (b.maxX - b.minX) * 2.5, (b.maxZ - b.minZ) * 2.5);
+      }
+      const cols = ['#e07840','#39a7b0'];
+      sites.forEach((s, i) => {
+        c.strokeStyle = cols[i]; c.fillStyle = cols[i]; c.lineWidth = 2;
+        c.beginPath(); c.arc(mmX(s.x), mmY(s.z), s.r * 2.5, 0, 7); c.stroke();
+        c.font = '700 12px ui-monospace,monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(s.id, mmX(s.x), mmY(s.z) + 1);
+      });
+      mmCtx = els.minimap.getContext('2d');
+      mmCtx.scale(2, 2);
+    },
+    showMinimap(on) { els.minimap.classList.toggle('on', !!on); },
+    drawMinimap(player, actors, targets, yaw, ffa) {
+      if (!mmCtx) return;
+      mmCtx.drawImage(mmBase, 0, 0, 176, 134);
+      const dot = (x, z, col) => { mmCtx.fillStyle = col; mmCtx.beginPath(); mmCtx.arc(mmX(x), mmY(z), 3, 0, 7); mmCtx.fill(); };
+      if (targets) { for (const t of targets) if (t.alive) dot(t.pos.x, t.pos.z, '#ff5148'); }
+      else for (const a of actors) {
+        if (a === player || !a.alive) continue;
+        dot(a.pos.x, a.pos.z, ffa || a.team !== player.team ? '#ff5148' : TEAMCOL[a.team]);
+      }
+      if (!player.alive) return;
+      mmCtx.save();
+      mmCtx.translate(mmX(player.pos.x), mmY(player.pos.z));
+      mmCtx.rotate(Math.atan2(-Math.cos(yaw), -Math.sin(yaw)));
+      mmCtx.fillStyle = '#f2ede2';
+      mmCtx.beginPath(); mmCtx.moveTo(6.5, 0); mmCtx.lineTo(-4.5, -4); mmCtx.lineTo(-4.5, 4); mmCtx.closePath(); mmCtx.fill();
+      mmCtx.restore();
+    },
     setTimer(text, urgent) {
       els.timer.textContent = text;
       els.timer.classList.toggle('urgent', !!urgent);
@@ -192,7 +235,7 @@ export function createHud() {
     },
     refreshBuy(actor, canBuyNow) {
       els.buyMoney.textContent = '$' + actor.money.toLocaleString('en-US');
-      els.buyNote.textContent = canBuyNow ? 'Click an item or press its key. B or Esc to close.' : 'Buy window closed — items unlock at the next freeze.';
+      els.buyNote.textContent = canBuyNow ? 'Click an item or press its key. B or Esc to close.' : 'Buy window closed — opens next freeze.';
       for (const btn of els.buyGrid.children) {
         const item = btn.dataset.item;
         const info = itemInfo(item);

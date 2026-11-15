@@ -1,4 +1,3 @@
-// Palette: rust against slate teal; teams read by colour.
 export const PALETTE = {
   sky: 0x7f9db8,
   fog: 0x9db2c2,
@@ -13,5 +12,5 @@ export const PALETTE = {
   wardenDark: 0x1d4e54,
 };
 
-export const TEAM_NAMES = ['Jackals', 'Wardens'];
+export const TEAM_NAMES = ['Jackals','Wardens'];
 export const TEAM_COLORS = [PALETTE.jackal, PALETTE.teal];

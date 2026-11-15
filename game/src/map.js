@@ -1,4 +1,3 @@
-// The Foundry: furnace hall (A), rail yard (B), mid core.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 import { makeBox } from './physics.js';
@@ -10,8 +9,8 @@ export const SITES = [
 ];
 
 export const SPAWNS = [
-  [[-28,21],[-24,21],[-26,18.5],[-29,18],[-23,18.5]],// Jackals
-  [[28,-21],[24,-21],[26,-18.5],[29,-18],[23,-18.5]],// Wardens
+  [[-28,21],[-24,21],[-26,18.5],[-29,18],[-23,18.5]],
+  [[28,-21],[24,-21],[26,-18.5],[29,-18],[23,-18.5]],
 ];
 
 const NODES = [
@@ -57,23 +56,23 @@ function buildGraph() {
 export function createMap(scene, random) {
   const colliders = [];
   const mats = {
-    siding: new THREE.MeshStandardMaterial({ map: sidingTexture(random), roughness: 0.85, metalness: 0.25 }),
-    sidingRust: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#7a4a34', '#5f3826'), roughness: 0.9, metalness: 0.2 }),
-    sidingTeal: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#41706f', '#2f5453'), roughness: 0.85, metalness: 0.25 }),
-    sidingSand: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#9c8a66', '#7c6c4c'), roughness: 0.9, metalness: 0.15 }),
-    steel: new THREE.MeshStandardMaterial({ map: sidingTexture(random, '#7e8894', '#626c78'), roughness: 0.7, metalness: 0.45 }),
-    glassLit: new THREE.MeshBasicMaterial({ color: 0xffc06a }),
-    glass: new THREE.MeshStandardMaterial({ color: 0x22343e, roughness: 0.25, metalness: 0.6 }),
-    door: new THREE.MeshStandardMaterial({ color: PALETTE.tealDark, roughness: 0.6, metalness: 0.5 }),
-    concrete: new THREE.MeshStandardMaterial({ map: concreteTexture(random), roughness: 0.95 }),
-    crate: new THREE.MeshStandardMaterial({ map: crateTexture(random), roughness: 0.9 }),
-    containerRust: new THREE.MeshStandardMaterial({ map: containerTexture(random, '#a34d28', '#7e3a1f'), roughness: 0.8, metalness: 0.3 }),
-    containerTeal: new THREE.MeshStandardMaterial({ map: containerTexture(random, '#2e6f76', '#1d4e54'), roughness: 0.8, metalness: 0.3 }),
-    metalDark: new THREE.MeshStandardMaterial({ color: PALETTE.metalDark, roughness: 0.6, metalness: 0.6 }),
-    metal: new THREE.MeshStandardMaterial({ color: PALETTE.metal, roughness: 0.5, metalness: 0.6 }),
-    dark: new THREE.MeshStandardMaterial({ color: 0x23272c, roughness: 1 }),
-    glow: new THREE.MeshBasicMaterial({ color: 0xff7a26 }),
-    lamp: new THREE.MeshBasicMaterial({ color: 0xffe2b0 }),
+    siding:new THREE.MeshStandardMaterial({ map:sidingTexture(random),roughness:0.85,metalness:0.25 }),
+    sidingRust:new THREE.MeshStandardMaterial({ map:sidingTexture(random,'#7a4a34','#5f3826'),roughness:0.9,metalness:0.2 }),
+    sidingTeal:new THREE.MeshStandardMaterial({ map:sidingTexture(random,'#41706f','#2f5453'),roughness:0.85,metalness:0.25 }),
+    sidingSand:new THREE.MeshStandardMaterial({ map:sidingTexture(random,'#9c8a66','#7c6c4c'),roughness:0.9,metalness:0.15 }),
+    steel:new THREE.MeshStandardMaterial({ map:sidingTexture(random,'#7e8894','#626c78'),roughness:0.7,metalness:0.45 }),
+    glassLit:new THREE.MeshBasicMaterial({ color:0xffc06a }),
+    glass:new THREE.MeshStandardMaterial({ color:0x22343e,roughness:0.25,metalness:0.6 }),
+    door:new THREE.MeshStandardMaterial({ color:PALETTE.tealDark,roughness:0.6,metalness:0.5 }),
+    concrete:new THREE.MeshStandardMaterial({ map:concreteTexture(random),roughness:0.95 }),
+    crate:new THREE.MeshStandardMaterial({ map:crateTexture(random),roughness:0.9 }),
+    containerRust:new THREE.MeshStandardMaterial({ map:containerTexture(random,'#a34d28','#7e3a1f'),roughness:0.8,metalness:0.3 }),
+    containerTeal:new THREE.MeshStandardMaterial({ map:containerTexture(random,'#2e6f76','#1d4e54'),roughness:0.8,metalness:0.3 }),
+    metalDark:new THREE.MeshStandardMaterial({ color:PALETTE.metalDark,roughness:0.6,metalness:0.6 }),
+    metal:new THREE.MeshStandardMaterial({ color:PALETTE.metal,roughness:0.5,metalness:0.6 }),
+    dark:new THREE.MeshStandardMaterial({ color:0x23272c,roughness:1 }),
+    glow:new THREE.MeshBasicMaterial({ color:0xff7a26 }),
+    lamp:new THREE.MeshBasicMaterial({ color:0xffe2b0 }),
   };
 
   function box(cx, cy, cz, w, h, d, mat) {
@@ -172,7 +171,6 @@ export function createMap(scene, random) {
     else box(x, 1.3, z, 6, 2.6, 2.4, mats.containerTeal);
   }
 
-  // Dressing: windows and doors on solid wall faces.
   function pane(x, z, ry, lit, door) {
     const g = new THREE.Group();
     const w = door ? 1.15 : 1.5, h = door ? 2.25 : 1.05;
@@ -189,7 +187,6 @@ export function createMap(scene, random) {
   for (const [x, z, ry, lit] of wins) pane(x, z, ry, lit, false);
   for (const [x, z, ry] of [[-4, 26, 3.14], [-7, -16, 1.57], [9.5, 17, 0], [-17, 13, 3.14]]) pane(x, z, ry, false, true);
 
-  // Border wrecks: cars along the perimeter.
   const wreckPaint = [0x8a4a30, 0x5d6a72, 0x74604a, 0x4e5e63, 0x93502c, 0x63504a, 0x707880].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0.35 }));
   const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.26, 12);
   function wreck(x, z, ry, ci, tilt, crushed) {
